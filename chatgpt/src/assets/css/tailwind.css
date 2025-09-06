@@ -1,0 +1,13 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import './animations.css';
+
+:root {
+  --primary-color: #d97706;
+  --secondary-color: #92400e;
+  --accent-color: #f59e0b;
+  --bg-color: #fffbeb;
+  --text-color: #1f2937;
+}

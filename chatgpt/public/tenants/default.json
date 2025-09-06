@@ -1,0 +1,70 @@
+{
+  "id": "al-amal",
+  "brand": {
+    "name_ar": "مطعم العلاء",
+    "logo": "/logos/amal.svg"
+  },
+  "theme": {
+    "primary": "#ff6a00",
+    "secondary": "#ff2d55",
+    "surface": "#ffffff",
+    "text": "#1f2937",
+    "radius": "16px",
+    "shadow": "0 10px 20px rgba(0,0,0,0.08)"
+  },
+  "business": {
+    "currency": "SAR",
+    "tax_rate": 0.15,
+    "service_fee": 0
+  },
+  "contact": {
+    "whatsapp_e164": "+9665XXXXXXXX",
+    "address": "الرياض، المملكة العربية السعودية",
+    "map_url": ""
+  },
+  "menu": {
+    "categories": [
+      {
+        "id": "pizzas",
+        "name_ar": "بيتزا",
+        "order": 1
+      },
+      {
+        "id": "drinks",
+        "name_ar": "مشروبات",
+        "order": 2
+      }
+    ],
+    "products": [
+      {
+        "id": "margherita",
+        "category_id": "pizzas",
+        "name_ar": "مارغريتا",
+        "description_ar": "صوص طماطم، موزاريلا، ريحان",
+        "price": 30.0,
+        "image_url": "/images/margherita.jpg",
+        "available": true,
+        "option_groups": [
+          {
+            "id": "size",
+            "label_ar": "الحجم",
+            "type": "single",
+            "required": true,
+            "options": [
+              {
+                "id": "s",
+                "label_ar": "صغير",
+                "priceDelta": 0
+              },
+              {
+                "id": "l",
+                "label_ar": "كبير",
+                "priceDelta": 5
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,99 @@
+{
+  "id": "default",
+  "brand": { "name_ar": "مطعم الشارقة" },
+  "theme": { "primary": "#f97316", "secondary": "#fb923c" },
+  "business": { "currency": "IQD" },
+  "contact": { "whatsapp_e164": "+963939048805" },
+  "menu": {
+    "categories": [{ "id": "main", "name_ar": "القائمة", "order": 1 }],
+    "products": [
+      {
+        "id": "sku1",
+        "category_id": "main",
+        "name_ar": "سلطة فواكه",
+        "price": 100,
+        "image_url": "/images/img1.jpg",
+        "available": true,
+        "option_groups": [
+          {
+            "id": "size",
+            "label_ar": "الحجم",
+            "type": "single",
+            "required": true,
+            "options": [
+              { "id": "s", "label_ar": "صغير", "priceDelta": 0 },
+              { "id": "m", "label_ar": "وسط", "priceDelta": 20 },
+              { "id": "l", "label_ar": "كبير", "priceDelta": 40 }
+            ]
+          },
+          {
+            "id": "extras",
+            "label_ar": "إضافات",
+            "type": "multi",
+            "required": false,
+            "options": [
+              { "id": "cheese", "label_ar": "جبنة إضافية", "priceDelta": 10 },
+              { "id": "sauce", "label_ar": "صوص خاص", "priceDelta": 5 }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "sku2",
+        "category_id": "main",
+        "name_ar": "كيك",
+        "price": 70,
+        "image_url": "/images/img2.jpg",
+        "available": true
+      },
+      {
+        "id": "sku3",
+        "category_id": "main",
+        "name_ar": "فطاير",
+        "price": 12,
+        "image_url": "/images/img3.jpg",
+        "available": true
+      },
+      {
+        "id": "sku4",
+        "category_id": "main",
+        "name_ar": "فطاير بالجبن",
+        "price": 14,
+        "image_url": "/images/img4.jpg",
+        "available": true
+      },
+      {
+        "id": "sku5",
+        "category_id": "main",
+        "name_ar": "بيتزا خضار",
+        "price": 24,
+        "image_url": "/images/img5.jpg",
+        "available": true
+      },
+      {
+        "id": "sku6",
+        "category_id": "main",
+        "name_ar": "شطيرة دجاج",
+        "price": 15,
+        "image_url": "/images/img6.jpg",
+        "available": true
+      },
+      {
+        "id": "sku7",
+        "category_id": "main",
+        "name_ar": "عصير برتقال",
+        "price": 8,
+        "image_url": "/images/img7.jpg",
+        "available": true
+      },
+      {
+        "id": "sku8",
+        "category_id": "main",
+        "name_ar": "قهوة تركية",
+        "price": 6,
+        "image_url": "/images/img8.jpg",
+        "available": true
+      }
+    ]
+  }
+}
