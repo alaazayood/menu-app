@@ -1,97 +1,175 @@
 {
-  "id": "default",
-  "brand": { "name_ar": "مطعم الشارقة" },
+  "id": "karam-al-sham",
+  "brand": { "name_ar": "كرم الشام", "name_en": "Karam Al Sham" },
   "theme": { "primary": "#f97316", "secondary": "#fb923c" },
-  "business": { "currency": "IQD" },
+  "business": { "currency": "AED", "tax_rate": 0, "service_fee": 0 },
   "contact": { "whatsapp_e164": "+963939048805" },
+
   "menu": {
-    "categories": [{ "id": "main", "name_ar": "القائمة", "order": 1 }],
+    "categories": [
+      { "id": "fresh_juices", "name_ar": "عصائر طازجة", "name_en": "Fresh Juices", "order": 1 },
+      { "id": "salads", "name_ar": "السلطات", "name_en": "Salads", "order": 2 },
+      { "id": "cold_mezze", "name_ar": "مقبلات باردة", "name_en": "Cold Mezze", "order": 3 },
+      { "id": "sandwiches", "name_ar": "السندويش", "name_en": "Sandwiches", "order": 4 },
+      { "id": "falafel", "name_ar": "فلافل", "name_en": "Falafel", "order": 5 },
+      { "id": "soups", "name_ar": "شوربات", "name_en": "Soups", "order": 6 },
+      { "id": "manakeesh", "name_ar": "مناقيش", "name_en": "Manakeesh", "order": 7 },
+      { "id": "mains", "name_ar": "الأطباق الرئيسية", "name_en": "Main Course", "order": 8 }
+    ],
+
     "products": [
       {
-        "id": "sku1",
-        "category_id": "main",
-        "name_ar": "سلطة فواكه",
-        "price": 100,
-        "image_url": "/images/img1.jpg",
-        "available": true,
-        "option_groups": [
-          {
-            "id": "size",
-            "label_ar": "الحجم",
-            "type": "single",
-            "required": true,
-            "options": [
-              { "id": "s", "label_ar": "صغير", "priceDelta": 0 },
-              { "id": "m", "label_ar": "وسط", "priceDelta": 20 },
-              { "id": "l", "label_ar": "كبير", "priceDelta": 40 }
-            ]
-          },
-          {
-            "id": "extras",
-            "label_ar": "إضافات",
-            "type": "multi",
-            "required": false,
-            "options": [
-              { "id": "cheese", "label_ar": "جبنة إضافية", "priceDelta": 10 },
-              { "id": "sauce", "label_ar": "صوص خاص", "priceDelta": 5 }
-            ]
-          }
-        ]
-      },
-      {
-        "id": "sku2",
-        "category_id": "main",
-        "name_ar": "كيك",
-        "price": 70,
-        "image_url": "/images/img2.jpg",
-        "available": true
-      },
-      {
-        "id": "sku3",
-        "category_id": "main",
-        "name_ar": "فطاير",
-        "price": 12,
-        "image_url": "/images/img3.jpg",
-        "available": true
-      },
-      {
-        "id": "sku4",
-        "category_id": "main",
-        "name_ar": "فطاير بالجبن",
-        "price": 14,
-        "image_url": "/images/img4.jpg",
-        "available": true
-      },
-      {
-        "id": "sku5",
-        "category_id": "main",
-        "name_ar": "بيتزا خضار",
-        "price": 24,
-        "image_url": "/images/img5.jpg",
-        "available": true
-      },
-      {
-        "id": "sku6",
-        "category_id": "main",
-        "name_ar": "شطيرة دجاج",
-        "price": 15,
-        "image_url": "/images/img6.jpg",
-        "available": true
-      },
-      {
-        "id": "sku7",
-        "category_id": "main",
+        "id": "juice_orange",
+        "category_id": "fresh_juices",
         "name_ar": "عصير برتقال",
+        "name_en": "Orange juice",
+        "price": 20,
+        "available": true,
+        "image_url": "images/img1.jpg"
+      },
+      {
+        "id": "juice_carrot",
+        "category_id": "fresh_juices",
+        "name_ar": "عصير جزر",
+        "name_en": "Carrot juice",
+        "price": 20,
+        "available": true,
+        "image_url": "images/img2.jpg"
+      },
+      {
+        "id": "juice_lemon_mint",
+        "category_id": "fresh_juices",
+        "name_ar": "عصير ليمون مع نعنع",
+        "name_en": "Lemon with mint juice",
+        "price": 20,
+        "available": true,
+        "image_url": "images/img3.jpg"
+      },
+
+      {
+        "id": "salad_tabbouleh",
+        "category_id": "salads",
+        "name_ar": "تبولة",
+        "name_en": "Tabbouleh",
+        "price": 20,
+        "available": true,
+        "image_url": "images/img4.jpg"
+      },
+      {
+        "id": "salad_caesar",
+        "category_id": "salads",
+        "name_ar": "سلطة سيزر دجاج",
+        "name_en": "Chicken Caesar Salad",
+        "price": 25,
+        "available": true,
+        "image_url": "images/img5.jpg"
+      },
+
+      {
+        "id": "mezze_hummous",
+        "category_id": "cold_mezze",
+        "name_ar": "حمص",
+        "name_en": "Hummous",
+        "price": 15,
+        "available": true,
+        "image_url": "images/img6.jpg"
+      },
+      {
+        "id": "mezze_moutabal",
+        "category_id": "cold_mezze",
+        "name_ar": "متبل",
+        "name_en": "Moutabal",
+        "price": 18,
+        "available": true,
+        "image_url": "images/img7.jpg"
+      },
+
+      {
+        "id": "sand_spicy_potato",
+        "category_id": "sandwiches",
+        "name_ar": "بطاطا حارة",
+        "name_en": "Spicy potato",
+        "price": 15,
+        "available": true,
+        "image_url": "images/img8.jpg"
+      },
+      {
+        "id": "sand_eggs_cheese",
+        "category_id": "sandwiches",
+        "name_ar": "بيض مقلي مع جبنة",
+        "name_en": "Fried eggs with cheese",
+        "price": 15,
+        "available": true,
+        "image_url": "images/img9.jpg"
+      },
+
+      {
+        "id": "falafel_plate",
+        "category_id": "falafel",
+        "name_ar": "فلافل صحن",
+        "name_en": "Falafel Plate",
+        "price": 15,
+        "available": true,
+        "image_url": "images/img10.jpg"
+      },
+      {
+        "id": "falafel_sandwich",
+        "category_id": "falafel",
+        "name_ar": "فلافل ساندويش",
+        "name_en": "Falafel Sandwich",
         "price": 8,
-        "image_url": "/images/img7.jpg",
+        "available": true,
+        "image_url": "images/img11.jpg"
+      },
+
+      {
+        "id": "soup_lentil",
+        "category_id": "soups",
+        "name_ar": "شوربة عدس",
+        "name_en": "Lentil soup",
+        "price": 10,
         "available": true
       },
       {
-        "id": "sku8",
-        "category_id": "main",
-        "name_ar": "قهوة تركية",
-        "price": 6,
-        "image_url": "/images/img8.jpg",
+        "id": "soup_mushroom",
+        "category_id": "soups",
+        "name_ar": "شوربة فطر",
+        "name_en": "Mushroom soup",
+        "price": 10,
+        "available": true
+      },
+
+      {
+        "id": "man_zaatar",
+        "category_id": "manakeesh",
+        "name_ar": "زعتر",
+        "name_en": "Zatar",
+        "price": 10,
+        "available": true
+      },
+      {
+        "id": "man_cheese",
+        "category_id": "manakeesh",
+        "name_ar": "جبنة",
+        "name_en": "Cheese",
+        "price": 12,
+        "available": true
+      },
+
+      {
+        "id": "main_chicken_fajita",
+        "category_id": "mains",
+        "name_ar": "فاهيتا دجاج",
+        "name_en": "Chicken Fajita",
+        "price": 50,
+        "available": true
+      },
+      {
+        "id": "main_roasted_breast",
+        "category_id": "mains",
+        "name_ar": "صدر دجاج محمر بالبهار",
+        "name_en": "Roasted chicken breast spicy",
+        "price": 55,
         "available": true
       }
     ]

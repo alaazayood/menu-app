@@ -1,8 +1,9 @@
 <template>
-  <!-- سكيلتون أثناء التحميل -->
+  <!-- سكيلتون -->
   <div
     v-if="status === 'loading'"
     class="min-h-screen bg-[linear-gradient(135deg,#fff7ed,35%,#fde68a)]"
+    :dir="dir"
   >
     <header class="sticky top-0 z-20 glass border-b">
       <div class="container mx-auto px-4 py-3">
@@ -24,171 +25,147 @@
   </div>
 
   <!-- خطأ -->
-  <div v-else-if="status === 'error'" class="p-8 text-center text-red-600">
-    تعذّر تحميل القائمة
+  <div v-else-if="status === 'error'" class="p-8 text-center text-red-600" :dir="dir">
+    {{ t('error') }}
     <pre class="mt-2 bg-white p-3 rounded-md shadow overflow-x-auto text-left text-xs">{{
       errorMsg
     }}</pre>
+    <button @click="loadTenant" class="mt-4 px-4 py-2 bg-red-600 text-white rounded-full">
+      {{ t('retry') }}
+    </button>
   </div>
 
   <!-- التطبيق -->
-  <div v-else class="min-h-screen bg-[linear-gradient(135deg,#fff7ed,35%,#fde68a)] text-right">
-    <!-- هيدر زجاجي -->
-    <header class="sticky top-0 z-20 glass border-b">
-      <div class="container mx-auto px-4 py-3 flex items-center justify-center">
-        <div class="flex items-center gap-3">
-          <div
-            v-if="tenant.brand?.logo"
-            class="w-12 h-12 rounded-2xl overflow-hidden ring-1 ring-black/5 shadow"
-          >
-            <img
-              :src="resolveAsset(tenant.brand.logo)"
-              :alt="brandName"
-              class="w-full h-full object-cover"
-              @error="onImgError"
-            />
-          </div>
-          <div class="text-center">
-            <h1 class="text-2xl sm:text-3xl font-extrabold" :style="{ color: themePrimary }">
-              {{ brandName }}
-            </h1>
-            <p class="text-xs sm:text-sm text-gray-500">
-              {{ tenant.brand?.tagline || 'منيو إلكترونية — اطلب عبر واتساب' }}
-            </p>
-          </div>
-        </div>
-      </div>
-    </header>
+  <div
+    v-else
+    class="min-h-screen bg-[linear-gradient(135deg,#fff7ed,35%,#fde68a)]"
+    :dir="dir"
+    :class="[dir === 'rtl' ? 'text-right' : 'text-left']"
+  >
+    <!-- هيدر -->
+    <AppHeader
+      :brand-name="brandName"
+      :brand-logo="resolveAsset(tenant.brand?.logo)"
+      :tagline="tenant.brand?.tagline || t('tagline')"
+      :theme-primary="themePrimary"
+      :current-language="currentLanguage"
+      :dir="dir"
+      @toggle-language="toggleLanguage"
+    />
 
-    <!-- تبويب تصنيفات -->
-    <nav v-if="tabs.length" class="sticky top-[68px] sm:top-[72px] z-10 glass border-b">
+    <!-- بحث -->
+    <div v-if="products.length > 5" class="sticky top-[68px] sm:top-[72px] z-10 glass border-b">
       <div class="container mx-auto px-4 py-2">
-        <ul class="flex gap-2 overflow-x-auto no-scrollbar">
-          <li v-for="c in tabs" :key="c.id">
-            <button
-              @click="activeCat = c.id"
-              class="px-4 py-2 rounded-full text-sm font-bold transition-all"
-              :style="tabStyle(c.id)"
-            >
-              {{ c.name_ar }}
-            </button>
-          </li>
-        </ul>
-      </div>
-    </nav>
-
-    <!-- المنتجات -->
-    <main class="container mx-auto px-4 py-8">
-      <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        <article
-          v-for="(p, idx) in filteredProducts"
-          :key="p.id"
-          class="js-card group card-base"
-          :data-id="p.id"
-          :style="{ '--stagger': (idx % 12) * 60 + 'ms' }"
-          :class="{ 'in-view': inView[p.id] }"
-        >
-          <div class="relative h-48 sm:h-52 overflow-hidden">
-            <img
-              :src="resolveImg(p)"
-              :alt="p.name_ar"
-              class="w-full h-full object-cover card-img"
-              @error="onImgError"
-            />
-            <!-- بادج السعر -->
-            <div class="price-badge" :style="{ color: themePrimary }">
-              {{ formatPrice(p.price) }} {{ currency }}
-            </div>
-            <!-- زر إضافة عائم -->
-            <button class="add-fab" :style="btnStyle" @click="onAddClick(p, $event)">
-              أضف
-              <span v-if="fabPing" class="ping"></span>
-            </button>
-          </div>
-
-          <div class="p-4">
-            <h3 class="font-bold text-lg text-gray-800 mb-1">{{ p.name_ar }}</h3>
-            <p v-if="p.description_ar" class="text-sm text-gray-600 mb-3">{{ p.description_ar }}</p>
-
-            <div class="flex items-center justify-between">
-              <span class="text-xs text-transparent">#{{ p.id }}</span>
-              <div class="flex items-center gap-2">
-                <button
-                  class="px-3 py-2 rounded-full border text-sm font-semibold hover:bg-gray-50 active:scale-95 transition"
-                  @click="decFromGrid(p)"
-                >
-                  −
-                </button>
-                <button
-                  class="px-4 py-2 rounded-full text-white font-bold soft-shadow active:scale-95 transition"
-                  :style="btnStyle"
-                  @click="onAddClick(p, $event)"
-                >
-                  أضف
-                </button>
-              </div>
-            </div>
-          </div>
-        </article>
-      </div>
-
-      <p v-if="!filteredProducts.length" class="text-center text-gray-500 py-16">
-        لا توجد منتجات في هذا التصنيف
-      </p>
-    </main>
-
-    <!-- شريط السلة السفلي -->
-    <div
-      v-if="cart.length"
-      :class="['fixed bottom-0 left-0 right-0 glass border-t cartbar', { bump: cartBump }]"
-    >
-      <div class="container mx-auto px-4 py-3">
-        <!-- العناصر -->
-        <div class="flex items-center gap-3 overflow-x-auto pb-2">
-          <div
-            v-for="it in cart"
-            :key="it.key"
-            class="glass border rounded-2xl px-3 py-2 flex items-center gap-2 soft-shadow line"
+        <div class="relative">
+          <input
+            v-model="searchQuery"
+            type="text"
+            :placeholder="t('searchPlaceholder')"
+            class="w-full px-4 py-2 rounded-full border border-gray-300 focus:outline-none focus:ring-2"
+            :style="{
+              'padding-left': dir === 'rtl' ? '3rem' : '1rem',
+              'padding-right': dir === 'rtl' ? '1rem' : '3rem',
+            }"
+          />
+          <svg
+            class="absolute top-2.5 text-gray-400"
+            :class="dir === 'rtl' ? 'right-3' : 'left-3'"
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
           >
-            <span class="font-semibold text-sm max-w-[160px] truncate">{{ it.name }}</span>
-            <div class="flex items-center gap-1">
-              <button
-                class="px-2 py-1 rounded-full border active:scale-95 transition"
-                @click="decQty(it)"
-              >
-                −
-              </button>
-              <span class="w-6 text-center qty" :key="it.qty">{{ it.qty }}</span>
-              <button
-                class="px-2 py-1 rounded-full border active:scale-95 transition"
-                @click="incQty(it)"
-              >
-                +
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- الإجمالي + واتساب -->
-        <div class="mt-1 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div class="text-sm">
-            العناصر: {{ itemCount }} · المجموع:
-            <span class="font-bold">{{ formatPrice(total) }} {{ currency }}</span>
-            <span v-if="vatRate"> (يشمل ضريبة {{ (vatRate * 100).toFixed(0) }}%)</span>
-          </div>
-          <a
-            :href="waLink"
-            target="_blank"
-            class="inline-block text-white font-bold px-5 py-2 rounded-full soft-shadow text-center active:scale-95 transition"
-            :style="btnStyle"
-          >
-            إرسال واتساب
-          </a>
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
         </div>
       </div>
     </div>
 
-    <!-- Toast صغير -->
+    <!-- تبويبات -->
+    <CategoryTabs
+      v-model:activeId="activeCat"
+      :tabs="tabs"
+      :current-language="currentLanguage"
+      :theme-primary="themePrimary"
+      :theme-secondary="themeSecondary"
+      :dir="dir"
+    />
+
+    <!-- المنتجات -->
+    <main class="container mx-auto px-4 py-8">
+      <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <ProductCard
+          v-for="(p, idx) in filteredProducts"
+          :key="p.id"
+          :image-url="resolveImg(p)"
+          :title="currentLanguage === 'ar' ? p.name_ar : p.name_en || p.name_ar"
+          :desc="currentLanguage === 'ar' ? p.description_ar : p.description_en || p.description_ar"
+          :sku="p.id"
+          :price="p.price"
+          :currency="currency"
+          :add-label="t('add')"
+          :btn-style="btnStyle"
+          :theme-primary="themePrimary"
+          :in-view="inView[p.id]"
+          :stagger-ms="(idx % 12) * 60"
+          :dir="dir"
+          @add="onAddClick(p)"
+          @dec="decFromGrid(p)"
+        />
+      </div>
+      <p v-if="!filteredProducts.length" class="text-center text-gray-500 py-16">
+        {{ t('noProducts') }}
+      </p>
+    </main>
+
+    <!-- السلة -->
+    <CartBar
+      :cart="cart"
+      :item-count="itemCount"
+      :subtotal="subtotal"
+      :tax="tax"
+      :total="total"
+      :vat-rate="vatRate"
+      :currency="currency"
+      :total-formatted="formatPrice(total) + ' ' + currency"
+      :labels="{
+        items: t('items'),
+        total: t('total'),
+        includesVat: t('includesVat'),
+        sendWhatsApp: t('sendWhatsApp'),
+      }"
+      :btn-style="btnStyle"
+      :bump="cartBump"
+      :dir="dir"
+      @inc="incQty"
+      @dec="decQty"
+      @checkout="openCheckout"
+    />
+
+    <!-- نافذة التأكيد -->
+    <CheckoutSheet
+      v-model:open="checkoutOpen"
+      :initial="customer"
+      :cart="cart"
+      :currency="currency"
+      :vat-rate="vatRate"
+      :subtotal="subtotal"
+      :tax="tax"
+      :total="total"
+      :btn-style="btnStyle"
+      :dir="dir"
+      :locale="currentLanguage === 'ar' ? 'ar' : 'en'"
+      :labels="checkoutLabels"
+      @submit="handleCheckoutSubmit"
+    />
+
+    <!-- Toast -->
     <div
       v-if="toast.show"
       class="fixed bottom-20 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full text-white font-semibold soft-shadow"
@@ -200,12 +177,100 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, nextTick } from 'vue'
+import { ref, reactive, computed, onMounted, nextTick, watch } from 'vue'
+import AppHeader from '@/components/AppHeader.vue'
+import CategoryTabs from '@/components/CategoryTabs.vue'
+import ProductCard from '@/components/ProductCard.vue'
+import CartBar from '@/components/CartBar.vue'
+import CheckoutSheet from '@/components/CheckoutSheet.vue'
 
-/* ===== تحميل بيانات المطعم: محاولتان + تايم أوت ===== */
+/* ===== ترجمة ===== */
+const translations = {
+  ar: {
+    appTitle: 'قائمة طعام إلكترونية',
+    tagline: 'اطلب عبر واتساب',
+    allCategories: 'الكل',
+    add: 'أضف',
+    items: 'العناصر',
+    total: 'المجموع',
+    includesVat: 'يشمل ضريبة',
+    sendWhatsApp: 'إرسال واتساب',
+    noProducts: 'لا توجد منتجات في هذا التصنيف',
+    loading: 'جاري التحميل...',
+    error: 'تعذّر تحميل القائمة',
+    retry: 'إعادة المحاولة',
+    name: 'الاسم',
+    location: 'الموقع',
+    note: 'ملاحظة',
+    subtotal: 'الإجمالي الفرعي',
+    tax: 'الضريبة',
+    grandTotal: 'الإجمالي',
+    newOrder: 'طلب جديد',
+    searchPlaceholder: 'ابحث عن منتج...',
+    confirmSend: 'إرسال عبر واتساب',
+    cancel: 'إلغاء',
+    checkoutTitle: 'أكمل بيانات الطلب',
+  },
+  en: {
+    appTitle: 'Digital Menu',
+    tagline: 'Order via WhatsApp',
+    allCategories: 'All',
+    add: 'Add',
+    items: 'Items',
+    total: 'Total',
+    includesVat: 'Includes VAT',
+    sendWhatsApp: 'Send WhatsApp',
+    noProducts: 'No products in this category',
+    loading: 'Loading...',
+    error: 'Failed to load menu',
+    retry: 'Retry',
+    name: 'Name',
+    location: 'Location',
+    note: 'Note',
+    subtotal: 'Subtotal',
+    tax: 'Tax',
+    grandTotal: 'Total',
+    newOrder: 'New Order',
+    searchPlaceholder: 'Search for a product...',
+    confirmSend: 'Send via WhatsApp',
+    cancel: 'Cancel',
+    checkoutTitle: 'Complete order details',
+  },
+}
+const currentLanguage = ref('ar')
+const dir = computed(() => (currentLanguage.value === 'ar' ? 'rtl' : 'ltr'))
+const t = (k) => translations[currentLanguage.value][k] || k
+function toggleLanguage() {
+  currentLanguage.value = currentLanguage.value === 'ar' ? 'en' : 'ar'
+  try {
+    localStorage.setItem('lang', currentLanguage.value)
+  } catch {
+    /* empty */
+  }
+}
+
+/* ===== مسارات BASE-aware ===== */
+const BASE = import.meta.env.BASE_URL
+const withBase = (p) => {
+  if (!p) return ''
+  if (/^(https?:)?\/\//i.test(p) || p.startsWith('data:')) return p
+  if (p.startsWith('/')) return BASE + p.slice(1)
+  return BASE + p.replace(/^\.?\//, '')
+}
+function resolveAsset(p) {
+  return withBase(p)
+}
+const PLACEHOLDER =
+  'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="400"><rect width="100%" height="100%" fill="%23f3f4f6"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%239ca3af" font-size="24">No Image</text></svg>'
+function resolveImg(p) {
+  return p?.image_url ? withBase(p.image_url) : PLACEHOLDER
+}
+
+/* ===== تحميل بيانات المطعم (Multi-Tenant) ===== */
 const status = ref('loading')
 const tenant = ref(null)
 const errorMsg = ref('')
+const searchQuery = ref('')
 
 async function fetchWithTimeout(url, ms = 6000) {
   const ctrl = new AbortController()
@@ -219,7 +284,14 @@ async function fetchWithTimeout(url, ms = 6000) {
 async function loadTenant() {
   status.value = 'loading'
   errorMsg.value = ''
-  const tries = ['./tenants/default.json', '/tenants/default.json']
+
+  const params = new URLSearchParams(location.search)
+  const key = (params.get('tenant') || 'default').trim().toLowerCase()
+  const base = BASE.endsWith('/') ? BASE : BASE + '/'
+  const candidate = `${base}tenants/${key}.json`
+  const fallback = `${base}tenants/default.json`
+  const tries = [candidate, './tenants/' + key + '.json', fallback, './tenants/default.json']
+
   for (const u of tries) {
     try {
       const r = await fetchWithTimeout(u, 6000)
@@ -227,6 +299,14 @@ async function loadTenant() {
       if (!r.ok) throw new Error(`HTTP ${r.status}: ${raw.slice(0, 200)}`)
       tenant.value = JSON.parse(raw)
       status.value = 'ok'
+      try {
+        const brand = tenant.value?.brand
+        const name =
+          currentLanguage.value === 'ar' ? brand?.name_ar : brand?.name_en || brand?.name_ar
+        document.title = name ? `${name} · Menu` : 'Menu'
+      } catch {
+        /* empty */
+      }
       await nextTick()
       initCardObserver()
       return
@@ -236,42 +316,81 @@ async function loadTenant() {
   }
   status.value = 'error'
 }
-onMounted(loadTenant)
+onMounted(() => {
+  try {
+    const saved = localStorage.getItem('lang')
+    if (saved === 'ar' || saved === 'en') currentLanguage.value = saved
+  } catch {
+    /* empty */
+  }
+  // حمّل بيانات العميل السابقة (إن وجدت)
+  try {
+    const raw = localStorage.getItem('customerInfo')
+    if (raw) Object.assign(customer, JSON.parse(raw))
+  } catch {
+    /* empty */
+  }
+  loadTenant()
+})
 
 /* ===== ثيم وبيانات عامة ===== */
-const brandName = computed(() => tenant.value?.brand?.name_ar || 'مطعم')
-const currency = computed(() => tenant.value?.business?.currency || 'IQD')
+const brandName = computed(() => {
+  const b = tenant.value?.brand
+  return currentLanguage.value === 'ar' ? b?.name_ar : b?.name_en || b?.name_ar || 'Restaurant'
+})
+const currency = computed(() => tenant.value?.business?.currency || 'AED')
 const vatRate = computed(() => Number(tenant.value?.business?.tax_rate || 0))
-const themePrimary = computed(() => tenant.value?.theme?.primary || '#ff6a00')
-const themeSecondary = computed(() => tenant.value?.theme?.secondary || '#ff2d55')
+const themePrimary = computed(() => tenant.value?.theme?.primary || '#f97316')
+const themeSecondary = computed(() => tenant.value?.theme?.secondary || '#fb923c')
 const btnStyle = computed(() => ({
   background: `linear-gradient(90deg, ${themePrimary.value}, ${themeSecondary.value})`,
 }))
 
-/* ===== التصنيفات والفلترة ===== */
-const cats = computed(() => {
-  const arr = tenant.value?.menu?.categories ? [...tenant.value.menu.categories] : []
-  arr.sort((a, b) => (a.order || 0) - (b.order || 0))
-  return arr
-})
-const tabs = computed(() => [{ id: 'all', name_ar: 'الكل' }, ...cats.value])
-const activeCat = ref('all')
+/* ===== تبويبات / فلترة ===== */
+const norm = (s) =>
+  String(s ?? '')
+    .trim()
+    .toLowerCase()
 const products = computed(() =>
   (tenant.value?.menu?.products || []).filter((p) => p.available !== false),
 )
-const filteredProducts = computed(() =>
-  activeCat.value === 'all'
-    ? products.value
-    : products.value.filter((p) => p.category_id === activeCat.value),
-)
+const tabs = computed(() => {
+  const cats = (tenant.value?.menu?.categories || [])
+    .slice()
+    .sort((a, b) => (a.order || 0) - (b.order || 0))
+  const has = new Set(products.value.map((p) => norm(p.category_id)))
+  const visible = cats.filter((c) => has.has(norm(c.id)))
+  return [{ id: 'all', name_ar: t('allCategories'), name_en: t('All') }, ...visible]
+})
+const activeCat = ref('all')
+const filteredProducts = computed(() => {
+  let list =
+    activeCat.value === 'all'
+      ? products.value
+      : products.value.filter((p) => norm(p.category_id) === norm(activeCat.value))
+  if (searchQuery.value) {
+    const q = norm(searchQuery.value)
+    list = list.filter(
+      (p) =>
+        norm(p.name_ar).includes(q) ||
+        norm(p.name_en).includes(q) ||
+        norm(p.description_ar).includes(q) ||
+        norm(p.description_en).includes(q),
+    )
+  }
+  return list
+})
 
-/* ===== السلة ===== */
+/* ===== سلة ===== */
 const cart = reactive([]) // [{ key, sku, name, unitPrice, qty }]
 const cartBump = ref(false)
 const toast = reactive({ show: false, text: '' })
-const fabPing = ref(false)
+const itemCount = computed(() => cart.reduce((a, c) => a + c.qty, 0))
+const subtotal = computed(() => cart.reduce((s, it) => s + it.unitPrice * it.qty, 0))
+const tax = computed(() => +(subtotal.value * vatRate.value).toFixed(2))
+const total = computed(() => subtotal.value + tax.value)
 
-function showToast(text = 'تمت الإضافة') {
+function showToast(text) {
   toast.text = text
   toast.show = true
   setTimeout(() => (toast.show = false), 1200)
@@ -284,19 +403,17 @@ function bump() {
   })
 }
 
-function onAddClick(p) {
-  addToCart(p)
-  showToast('تمت إضافة ' + (p.name_ar || 'الصنف'))
-  fabPing.value = true
-  setTimeout(() => (fabPing.value = false), 500)
-}
-
 function addToCart(p) {
   const key = p.id + '::{}'
+  const name = currentLanguage.value === 'ar' ? p.name_ar : p.name_en || p.name_ar
   const found = cart.find((it) => it.key === key)
   if (found) found.qty += 1
-  else cart.push({ key, sku: p.id, name: p.name_ar, unitPrice: Number(p.price) || 0, qty: 1 })
+  else cart.push({ key, sku: p.id, name, unitPrice: Number(p.price) || 0, qty: 1 })
   bump()
+}
+function onAddClick(p) {
+  addToCart(p)
+  showToast(t('add') + ' ' + (currentLanguage.value === 'ar' ? p.name_ar : p.name_en || p.name_ar))
 }
 function decFromGrid(p) {
   const key = p.id + '::{}'
@@ -317,96 +434,126 @@ function removeLine(it) {
   if (i >= 0) cart.splice(i, 1)
 }
 
-const itemCount = computed(() => cart.reduce((a, c) => a + c.qty, 0))
-const subtotal = computed(() => cart.reduce((s, it) => s + it.unitPrice * it.qty, 0))
-const tax = computed(() => +(subtotal.value * vatRate.value).toFixed(2))
-const total = computed(() => subtotal.value + tax.value)
+/* ===== بيانات العميل + واتساب ===== */
+const checkoutOpen = ref(false)
+const customer = reactive({ name: '', location: '', note: '' })
+const checkoutLabels = computed(() => ({
+  title: t('checkoutTitle'),
+  orderSummary: currentLanguage.value === 'ar' ? 'ملخص الطلب' : 'Order Summary',
+  qty: currentLanguage.value === 'ar' ? 'الكمية' : 'Qty',
+  unitPrice: currentLanguage.value === 'ar' ? 'سعر الوحدة' : 'Unit price',
+  subtotal: t('subtotal'),
+  tax: t('tax'),
+  grandTotal: t('grandTotal'),
+  name: t('name'),
+  namePh: currentLanguage.value === 'ar' ? 'اكتب اسمك' : 'Enter your name',
+  location: t('location'),
+  locationPh:
+    currentLanguage.value === 'ar'
+      ? 'مثال: الشارقة - القاسمية - بناية ...'
+      : 'Example: Sharjah - Al Qasimia - Building ...',
+  note: t('note'),
+  notePh:
+    currentLanguage.value === 'ar' ? 'تعليمات خاصة للتوصيل (اختياري)' : 'Delivery note (optional)',
+  total: t('total'),
+  cancel: t('cancel'),
+  confirm: t('confirmSend'),
+}))
 
-/* ===== واتساب ===== */
-const waLink = computed(() => {
+function openCheckout() {
+  if (!cart.length) return
+  checkoutOpen.value = true
+}
+
+function buildWaLink(info) {
   if (!tenant.value || !cart.length) return '#'
   const cur = currency.value
   const brand = brandName.value
   const lines = []
-  lines.push(`${brand} - طلب جديد`, '')
+  lines.push(`${brand} - ${t('newOrder')}`, '')
   for (const it of cart)
     lines.push(`- ${it.name} ×${it.qty} = ${formatPrice(it.unitPrice * it.qty)} ${cur}`)
   if (vatRate.value) {
-    lines.push('', `الإجمالي الفرعي: ${formatPrice(subtotal.value)} ${cur}`)
-    lines.push(`الضريبة: ${formatPrice(tax.value)} ${cur}`)
+    lines.push('', `${t('subtotal')}: ${formatPrice(subtotal.value)} ${cur}`)
+    lines.push(`${t('tax')}: ${formatPrice(tax.value)} ${cur}`)
   }
   lines.push(
-    `الإجمالي: ${formatPrice(total.value)} ${cur}`,
+    `${t('grandTotal')}: ${formatPrice(total.value)} ${cur}`,
     '',
-    'الاسم: ———',
-    'الموقع: ———',
-    'ملاحظة: ———',
+    `${t('name')}: ${info?.name || '—'}`,
+    `${t('location')}: ${info?.location || '—'}`,
+    `${t('note')}: ${info?.note || '—'}`,
   )
   const text = encodeURIComponent(lines.join('\n'))
   const phone = (tenant.value?.contact?.whatsapp_e164 || '').replace('+', '')
   return phone ? `https://wa.me/${phone}?text=${text}` : '#'
-})
-
-/* ===== الصور ===== */
-const PLACEHOLDER =
-  'data:image/svg+xml;utf8,\
-<svg xmlns="http://www.w3.org/2000/svg" width="800" height="400">\
-<rect width="100%" height="100%" fill="%23f3f4f6"/>\
-<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%239ca3af" font-size="24">No Image</text>\
-</svg>'
-function resolveImg(p) {
-  if (p?.image_url) return p.image_url
-  if (p?.image) return `images/${p.image}`
-  return PLACEHOLDER
 }
-function resolveAsset(pathStr) {
-  if (!pathStr) return ''
-  if (/^(https?:)?\/\//i.test(pathStr) || pathStr.startsWith('data:')) return pathStr
-  if (pathStr.startsWith('/')) return pathStr
-  return `/${pathStr.replace(/^\.?\//, '')}`
-}
-function onImgError(e) {
-  e.target.src = PLACEHOLDER
-  e.target.onerror = null
+function handleCheckoutSubmit(info) {
+  Object.assign(customer, info || {})
+  try {
+    localStorage.setItem('customerInfo', JSON.stringify(customer))
+  } catch {
+    /* empty */
+  }
+  const link = buildWaLink(customer)
+  if (link === '#') {
+    showToast(
+      currentLanguage.value === 'ar'
+        ? 'يرجى ضبط رقم واتساب في الإعدادات'
+        : 'Please set WhatsApp number',
+    )
+    return
+  }
+  window.open(link, '_blank')
 }
 
-/* ===== ظهور البطاقات عند التمرير ===== */
-const inView = reactive({})
-function initCardObserver() {
-  const cards = Array.from(document.querySelectorAll('.js-card'))
-  if (!cards.length) return
-  const ob = new IntersectionObserver(
-    (ents) => {
-      ents.forEach((e) => {
-        const id = e.target.getAttribute('data-id')
-        if (e.isIntersecting) {
-          inView[id] = true
-          ob.unobserve(e.target)
-        }
-      })
-    },
-    { rootMargin: '0px 0px -10% 0px', threshold: 0.1 },
-  )
-  cards.forEach((el) => ob.observe(el))
-}
-
-/* ===== أدوات ===== */
-function tabStyle(id) {
-  const active = activeCat.value === id
-  return active
-    ? {
-        background: `linear-gradient(90deg, ${themePrimary.value}, ${themeSecondary.value})`,
-        color: '#fff',
-      }
-    : { border: '1px solid #e5e7eb', color: '#111827', background: '#fff' }
-}
 function formatPrice(n) {
   try {
-    return new Intl.NumberFormat('ar', { maximumFractionDigits: 2 }).format(n)
+    return new Intl.NumberFormat(currentLanguage.value === 'ar' ? 'ar' : 'en', {
+      maximumFractionDigits: 2,
+    }).format(n)
   } catch {
     return n
   }
 }
+
+/* ===== ظهور البطاقات (IO) ===== */
+const inView = reactive({})
+let io = null
+function initCardObserver() {
+  if (io) {
+    io.disconnect()
+    io = null
+  }
+  const cards = Array.from(document.querySelectorAll('.card-base'))
+  if (!cards.length) return
+  if (typeof window !== 'undefined' && !('IntersectionObserver' in window)) {
+    cards.forEach((el) => {
+      const sku = el.getAttribute('data-sku')
+      if (sku) inView[sku] = true
+    })
+    return
+  }
+  io = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((e) => {
+        if (!e.isIntersecting) return
+        const sku = e.target.getAttribute('data-sku')
+        if (sku) inView[sku] = true
+        io.unobserve(e.target)
+      })
+    },
+    { rootMargin: '0px 0px -10% 0px', threshold: 0.1 },
+  )
+  cards.forEach((el) => {
+    const sku = el.getAttribute('data-sku')
+    if (sku && !inView[sku]) io.observe(el)
+  })
+}
+watch([activeCat, searchQuery, filteredProducts], async () => {
+  await nextTick()
+  initCardObserver()
+})
 </script>
 
 <style scoped>
@@ -414,8 +561,6 @@ function formatPrice(n) {
   max-width: 1200px;
   margin: 0 auto;
 }
-
-/* زجاج وجماليات */
 .glass {
   background: rgba(255, 255, 255, 0.7);
   backdrop-filter: saturate(180%) blur(12px);
@@ -423,8 +568,6 @@ function formatPrice(n) {
 .soft-shadow {
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
 }
-
-/* شيمر السكيلتون */
 .skeleton {
   position: relative;
   background: linear-gradient(90deg, #f3f4f6 20%, #e5e7eb 35%, #f3f4f6 60%);
@@ -439,8 +582,6 @@ function formatPrice(n) {
     background-position: -200% 0;
   }
 }
-
-/* بطاقة مع دخول تدريجي + تراتُب */
 .card-base {
   background: rgba(255, 255, 255, 0.92);
   border-radius: 24px;
@@ -463,8 +604,6 @@ function formatPrice(n) {
 .card-base:hover .card-img {
   transform: scale(1.06);
 }
-
-/* بادج السعر */
 .price-badge {
   position: absolute;
   top: 0.75rem;
@@ -487,8 +626,6 @@ function formatPrice(n) {
     opacity: 1;
   }
 }
-
-/* زر إضافة عائم */
 .add-fab {
   position: absolute;
   bottom: 0.75rem;
@@ -508,8 +645,12 @@ function formatPrice(n) {
   opacity: 1;
   transform: translateY(0);
 }
-
-/* pulse صغيرة عند النقر */
+@media (hover: none) {
+  .add-fab {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 .ping {
   position: absolute;
   inset: 0;
@@ -527,10 +668,9 @@ function formatPrice(n) {
     opacity: 0;
   }
 }
-
-/* شريط السلة bump */
 .cartbar {
   transform: translateZ(0);
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
 }
 .cartbar.bump {
   animation: bump 0.35s ease;
@@ -560,8 +700,6 @@ function formatPrice(n) {
     opacity: 1;
   }
 }
-
-/* سكرول نظيف للتبويبات */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }

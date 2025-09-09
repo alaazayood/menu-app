@@ -1,0 +1,89 @@
+{
+  "id": "alaa-zayood",
+  "brand": {
+    "name_ar": "علاء زيود ",
+    "name_en": "alaa zayood",
+    "logo": "images/karam/logo.svg",
+    "tagline": "أطيب المأكولات العربية"
+  },
+  "theme": { "primary": "#f97316", "secondary": "#fb923c" },
+  "business": { "currency": "AED", "tax_rate": 0, "service_fee": 0 },
+  "contact": { "whatsapp_e164": "+971501234567" },
+  "menu": {
+    "categories": [
+      { "id": "fresh_juices", "name_ar": "عصائر طازجة", "name_en": "Fresh Juices", "order": 1 },
+      { "id": "salads", "name_ar": "السلطات", "name_en": "Salads", "order": 2 },
+      { "id": "cold_mezze", "name_ar": "مقبلات باردة", "name_en": "Cold Mezze", "order": 3 },
+      { "id": "sandwiches", "name_ar": "السندويش", "name_en": "Sandwiches", "order": 4 }
+    ],
+    "products": [
+      {
+        "id": "juice_orange",
+        "category_id": "fresh_juices",
+        "name_ar": "عصير برتقال",
+        "name_en": "Orange juice",
+        "price": 20,
+        "available": true
+      },
+      {
+        "id": "juice_lemon_mint",
+        "category_id": "fresh_juices",
+        "name_ar": "ليمون ونعنع",
+        "name_en": "Lemon & Mint",
+        "price": 20,
+        "available": true
+      },
+
+      {
+        "id": "salad_tabbouleh",
+        "category_id": "salads",
+        "name_ar": "تبولة",
+        "name_en": "Tabbouleh",
+        "price": 20,
+        "available": true
+      },
+      {
+        "id": "salad_fattoush",
+        "category_id": "salads",
+        "name_ar": "فتوش",
+        "name_en": "Fattoush",
+        "price": 20,
+        "available": true
+      },
+
+      {
+        "id": "mezze_hummous",
+        "category_id": "cold_mezze",
+        "name_ar": "حمص",
+        "name_en": "Hummous",
+        "price": 15,
+        "available": true
+      },
+      {
+        "id": "mezze_moutabal",
+        "category_id": "cold_mezze",
+        "name_ar": "متبل",
+        "name_en": "Moutabal",
+        "price": 18,
+        "available": true
+      },
+
+      {
+        "id": "sand_spicy_potato",
+        "category_id": "sandwiches",
+        "name_ar": "بطاطا حارة",
+        "name_en": "Spicy potato",
+        "price": 15,
+        "available": true
+      },
+      {
+        "id": "sand_eggs_cheese",
+        "category_id": "sandwiches",
+        "name_ar": "بيض وجبنة",
+        "name_en": "Eggs & Cheese",
+        "price": 15,
+        "available": true
+      }
+    ]
+  }
+}
