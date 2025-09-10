@@ -3,7 +3,7 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 
 export default defineConfig({
-  base: '/menu-app-site/', // 👈 لازم نفس اسم الريبو بالضبط
+  base: '/', // 👈 لازم نفس اسم الريبو بالضبط
 
   plugins: [vue()],
   resolve: {
