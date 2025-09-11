@@ -3,7 +3,7 @@
   "brand": { "name_ar": "كرم الشام", "name_en": "Karam Al Sham" },
   "theme": { "primary": "#f97316", "secondary": "#fb923c" },
   "business": { "currency": "AED", "tax_rate": 0, "service_fee": 0 },
-  "contact": { "whatsapp_e164": "+963966262458" },
+  "contact": { "whatsapp_e164": "+963939048805" },
   "order_policy": {
     "needs_confirmation": true,
     "eta_minutes": 20,

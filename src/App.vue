@@ -1,5 +1,5 @@
 <template>
-  <!-- سكيلتون تحميل -->
+  <!-- سكيلتون -->
   <div
     v-if="status === 'loading'"
     class="min-h-screen bg-[linear-gradient(135deg,#fff7ed,35%,#fde68a)]"
@@ -24,7 +24,7 @@
     </main>
   </div>
 
-  <!-- رسالة خطأ -->
+  <!-- خطأ -->
   <div v-else-if="status === 'error'" class="p-8 text-center text-red-600" :dir="dir">
     {{ t('error') }}
     <pre class="mt-2 bg-white p-3 rounded-md shadow overflow-x-auto text-left text-xs">{{
@@ -76,7 +76,7 @@
       </div>
     </header>
 
-    <!-- شريط البحث -->
+    <!-- بحث -->
     <div v-if="products.length > 5" class="sticky top-[68px] sm:top-[72px] z-10 glass border-b">
       <div class="container mx-auto px-4 py-2">
         <div class="relative">
@@ -128,10 +128,7 @@
     </nav>
 
     <!-- المنتجات -->
-    <main
-      class="container mx-auto px-4 py-8"
-      :style="{ paddingBottom: cart.length ? 'calc(96px + var(--safe-bottom))' : '0px' }"
-    >
+    <main class="container mx-auto px-4 py-8" :style="{ paddingBottom: '110px' }">
       <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         <article
           v-for="(p, idx) in filteredProducts"
@@ -152,10 +149,6 @@
             <div class="price-badge" :style="{ color: themePrimary }">
               {{ formatPrice(p.price) }} {{ currency }}
             </div>
-            <button class="add-fab" :style="btnStyle" @click="onAddClick(p)">
-              {{ t('add') }}
-              <span v-if="fabPing" class="ping"></span>
-            </button>
           </div>
           <div class="p-4">
             <h3 class="font-bold text-lg text-gray-800 mb-1">
@@ -192,53 +185,34 @@
       </p>
     </main>
 
-    <!-- شريط السلة + زر Checkout -->
-    <div
-      v-if="cart.length"
-      :class="['fixed bottom-0 left-0 right-0 glass border-t cartbar', { bump: cartBump }]"
-    >
-      <div class="container mx-auto px-4 py-3">
-        <div class="flex items-center gap-3 overflow-x-auto pb-2">
-          <div
-            v-for="it in cart"
-            :key="it.key"
-            class="glass border rounded-2xl px-3 py-2 flex items-center gap-2 soft-shadow line"
-          >
-            <span class="font-semibold text-sm max-w-[200px] truncate">{{ it.name }}</span>
-            <div class="flex items-center gap-1">
-              <button
-                class="px-2 py-1 rounded-full border active:scale-95 transition"
-                @click="decQty(it)"
-              >
-                −
-              </button>
-              <span class="w-6 text-center qty" :key="it.qty">{{ it.qty }}</span>
-              <button
-                class="px-2 py-1 rounded-full border active:scale-95 transition"
-                @click="incQty(it)"
-              >
-                +
-              </button>
-            </div>
-          </div>
-        </div>
+    <!-- ورقة الخيارات -->
+    <ProductOptionsSheet
+      :show="showOptions"
+      :product="optionsProduct"
+      :lang="currentLanguage"
+      :currency="currency"
+      :btn-style="btnStyle"
+      @close="closeOptions"
+      @confirm="onOptionsConfirm"
+    />
 
-        <div class="mt-1 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div class="text-sm">
-            {{ t('items') }}: {{ itemCount }} · {{ t('total') }}:
-            <span class="font-bold">{{ formatPrice(total) }} {{ currency }}</span>
-            <span v-if="vatRate"> ({{ t('includesVat') }} {{ (vatRate * 100).toFixed(0) }}%)</span>
-          </div>
-          <button
-            class="inline-block text-white font-bold px-5 py-2 rounded-full soft-shadow text-center active:scale-95 transition"
-            :style="btnStyle"
-            @click="openCheckout"
-          >
-            {{ t('sendWhatsApp') }}
-          </button>
-        </div>
-      </div>
-    </div>
+    <!-- ورقة السلة -->
+    <CartSheet
+      :show="showCart"
+      :items="cart"
+      :currency="currency"
+      :subtotal="subtotal"
+      :tax="tax"
+      :total="total"
+      :vat-rate="vatRate"
+      :btn-style="btnStyle"
+      :lang="currentLanguage"
+      @close="showCart = false"
+      @inc="incQty"
+      @dec="decQty"
+      @remove="removeLine"
+      @checkout="openCheckout"
+    />
 
     <!-- نافذة Checkout -->
     <transition name="fade">
@@ -318,16 +292,18 @@
       @close="wait.show = false"
     />
 
-    <!-- ورقة الخيارات -->
-    <ProductOptionsSheet
-      :show="showOptions"
-      :product="optionsProduct"
-      :lang="currentLanguage"
-      :currency="currency"
-      :btn-style="btnStyle"
-      @close="closeOptions"
-      @confirm="onOptionsConfirm"
-    />
+    <!-- زر السلة العائم — يسار الشاشة ويظهر دائمًا -->
+    <button
+      class="cart-fab fixed left-4"
+      :class="[itemCount === 0 ? 'fab-disabled' : 'fab-active', fabBump ? 'fab-bump' : '']"
+      style="z-index: 60"
+      @click="showCart = true"
+      aria-label="Cart"
+    >
+      <span class="icon">🛒</span>
+      <span class="badge" :class="{ 'badge-show': itemCount > 0 }">{{ itemCount }}</span>
+      <span class="shine"></span>
+    </button>
   </div>
 </template>
 
@@ -335,6 +311,7 @@
 import { ref, reactive, computed, onMounted, nextTick, watch } from 'vue'
 import OrderWaitScreen from './components/OrderWaitScreen.vue'
 import ProductOptionsSheet from './components/ProductOptionsSheet.vue'
+import CartSheet from './components/CartSheet.vue'
 
 /* ===== ترجمة ===== */
 const translations = {
@@ -482,33 +459,19 @@ const filteredProducts = computed(() => {
 
 /* ===== السلة ===== */
 const cart = reactive([]) // { key, sku, name, unitPrice, qty }
-const cartBump = ref(false)
-const toast = reactive({ show: false, text: '' })
-const fabPing = ref(false)
+const showCart = ref(false)
+const fabBump = ref(false)
 
-function showToast(s) {
-  toast.text = s
-  toast.show = true
-  setTimeout(() => (toast.show = false), 1200)
+function addLine({ key, sku, displayName, unitPrice }) {
+  const found = cart.find((it) => it.key === key)
+  if (found) found.qty++
+  else cart.push({ key, sku, name: displayName, unitPrice, qty: 1 })
 }
-function bump() {
-  cartBump.value = false
-  requestAnimationFrame(() => {
-    cartBump.value = true
-    setTimeout(() => (cartBump.value = false), 400)
-  })
-}
-
-/* إضافة من الشبكة (مع أو بدون خيارات) */
-const showOptions = ref(false)
-const optionsProduct = ref(null)
-
 function onAddClick(p) {
   if (p?.option_groups?.length) {
     optionsProduct.value = p
     showOptions.value = true
   } else {
-    // إضافة مباشرة دون خيارات
     addLine({
       key: p.id + '::' + '{}',
       sku: p.id,
@@ -516,44 +479,18 @@ function onAddClick(p) {
       unitPrice: Number(p.price) || 0,
     })
   }
-  fabPing.value = true
-  setTimeout(() => (fabPing.value = false), 500)
-}
-function closeOptions() {
-  showOptions.value = false
-  optionsProduct.value = null
-}
-function onOptionsConfirm(payload) {
-  // payload: { key, displayName, unitPrice }
-  if (!optionsProduct.value) return
-  addLine({
-    key: payload.key,
-    sku: optionsProduct.value.id,
-    displayName: payload.displayName,
-    unitPrice: Number(payload.unitPrice) || 0,
-  })
-  closeOptions()
-}
-function addLine({ key, sku, displayName, unitPrice }) {
-  const found = cart.find((it) => it.key === key)
-  if (found) found.qty++
-  else cart.push({ key, sku, name: displayName, unitPrice, qty: 1 })
-  bump()
 }
 function decFromGrid(p) {
-  // يقلّل من أبسط نسخة (بدون خيارات) إن وجدت
   const key = p.id + '::' + '{}'
   const f = cart.find((it) => it.key === key)
   if (!f) return
   f.qty > 1 ? f.qty-- : removeLine(f)
-  bump()
 }
 function incQty(it) {
   it.qty++
-  bump()
 }
 function decQty(it) {
-  it.qty > 1 ? (it.qty--, bump()) : (removeLine(it), bump())
+  it.qty > 1 ? it.qty-- : removeLine(it)
 }
 function removeLine(it) {
   const i = cart.findIndex((x) => x.key === it.key)
@@ -565,18 +502,48 @@ const subtotal = computed(() => cart.reduce((s, it) => s + it.unitPrice * it.qty
 const tax = computed(() => +(subtotal.value * vatRate.value).toFixed(2))
 const total = computed(() => subtotal.value + tax.value)
 
+watch(itemCount, (n, o) => {
+  if (n > o) {
+    fabBump.value = false
+    requestAnimationFrame(() => {
+      fabBump.value = true
+      setTimeout(() => (fabBump.value = false), 420)
+    })
+  }
+})
+
+/* ===== خيارات المنتج (Sheet) ===== */
+const showOptions = ref(false)
+const optionsProduct = ref(null)
+function closeOptions() {
+  showOptions.value = false
+  optionsProduct.value = null
+}
+function onOptionsConfirm(payload) {
+  if (!optionsProduct.value) return
+  addLine({
+    key: payload.key,
+    sku: optionsProduct.value.id,
+    displayName: payload.displayName,
+    unitPrice: Number(payload.unitPrice) || 0,
+  })
+  closeOptions()
+}
+
 /* ===== Checkout + WhatsApp ===== */
 const showCheckout = ref(false)
 const sending = ref(false)
 const sendError = ref('')
+function openCheckout() {
+  showCart.value = false
+  showCheckout.value = true
+}
+
 const customer = reactive({
   name: localStorage.getItem('cust_name') || '',
   location: localStorage.getItem('cust_loc') || '',
   note: localStorage.getItem('cust_note') || '',
 })
-function openCheckout() {
-  showCheckout.value = true
-}
 watch(
   () => customer.name,
   (v) => localStorage.setItem('cust_name', v || ''),
@@ -590,9 +557,9 @@ watch(
   (v) => localStorage.setItem('cust_note', v || ''),
 )
 
-/* Order ID + شاشة الانتظار */
 const wait = reactive({ show: false, id: '', eta: '', hours: '' })
 const lastWaLink = ref('#')
+
 function generateOrderId(prefix = 'ORD') {
   const d = new Date()
   const y = d.getFullYear()
@@ -604,11 +571,11 @@ function generateOrderId(prefix = 'ORD') {
   localStorage.setItem(k, String(seq))
   return `${prefix}-${y}${m}${day}-${hm}-${String(seq).padStart(2, '0')}`
 }
+
 const cooldownMs = 3500
 let lastSentAt = 0
 
-function buildWaLinkWithOrder(orderId) {
-  if (!tenant.value || !cart.length) return '#'
+function buildOrderText(orderId) {
   const cur = currency.value
   const brand = brandName.value
   const lines = []
@@ -616,26 +583,20 @@ function buildWaLinkWithOrder(orderId) {
   lines.push(`Order: ${orderId}`)
   if (tableParam) lines.push(`Table: ${tableParam}`)
   lines.push('')
-
   for (const it of cart)
     lines.push(`- ${it.name} ×${it.qty} = ${formatPrice(it.unitPrice * it.qty)} ${cur}`)
-
   if (vatRate.value) {
     lines.push('', `${t('subtotal')}: ${formatPrice(subtotal.value)} ${cur}`)
     lines.push(`${t('tax')}: ${formatPrice(tax.value)} ${cur}`)
   }
   lines.push(`${t('grandTotal')}: ${formatPrice(total.value)} ${cur}`, '')
-
   lines.push(`${t('name')}: ${customer.name || '—'}`)
   lines.push(`${t('location')}: ${customer.location || '—'}`)
   lines.push(`${t('note')}: ${customer.note || '—'}`)
-
-  const text = encodeURIComponent(lines.join('\n'))
-  const phone = (tenant.value?.contact?.whatsapp_e164 || '').replace('+', '')
-  return phone ? `https://wa.me/${phone}?text=${text}` : '#'
+  return lines.join('\n')
 }
 
-async function confirmAndSend() {
+function confirmAndSend() {
   sendError.value = ''
   if (!cart.length) {
     sendError.value = 'السلة فارغة.'
@@ -647,21 +608,32 @@ async function confirmAndSend() {
     return
   }
 
-  const prefix = tenant.value?.order_policy?.tenant_prefix || 'ORD'
-  const orderId = generateOrderId(prefix)
+  const orderId = generateOrderId(tenant.value?.order_policy?.tenant_prefix || 'ORD')
   localStorage.setItem('last_order_id', orderId)
 
-  const link = buildWaLinkWithOrder(orderId)
-  lastWaLink.value = link
+  const phone = (tenant.value?.contact?.whatsapp_e164 || '').replace('+', '')
+  const text = encodeURIComponent(buildOrderText(orderId))
+
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+  const appUrl = `whatsapp://send?phone=${phone}&text=${text}`
+  const webUrl = `https://wa.me/${phone}?text=${text}`
+
+  lastWaLink.value = webUrl
 
   sending.value = true
   try {
-    window.open(link, '_blank')
+    if (isMobile) {
+      window.location.href = appUrl
+      setTimeout(() => {
+        if (document.visibilityState === 'visible') window.open(webUrl, '_blank')
+      }, 900)
+    } else {
+      window.open(webUrl, '_blank')
+    }
   } finally {
     sending.value = false
     lastSentAt = now
     showCheckout.value = false
-
     wait.id = orderId
     wait.eta = tenant.value?.order_policy?.eta_minutes || ''
     wait.hours = tenant.value?.order_policy?.business_hours || ''
@@ -691,7 +663,7 @@ function onImgError(e) {
   e.target.onerror = null
 }
 
-/* ===== أدوات عرض ===== */
+/* ===== تنسيقات ===== */
 function tabStyle(id) {
   const active = activeCat.value === id
   return active
@@ -741,7 +713,7 @@ function formatPrice(n) {
   }
 }
 
-/* بطاقة: مرئية دائمًا + دخول لطيف */
+/* بطاقة */
 .card-base {
   background: rgba(255, 255, 255, 0.92);
   border-radius: 24px;
@@ -763,8 +735,10 @@ function formatPrice(n) {
 .card-img {
   transition: transform 0.6s ease;
 }
-.group:hover .card-img {
-  transform: scale(1.06);
+@media (hover: hover) {
+  .group:hover .card-img {
+    transform: scale(1.06);
+  }
 }
 
 /* بادج السعر */
@@ -791,83 +765,94 @@ function formatPrice(n) {
   }
 }
 
-/* زر الإضافة */
-.add-fab {
-  position: absolute;
-  bottom: 0.75rem;
-  left: 0.75rem;
-  padding: 0.5rem 1rem;
-  border-radius: 9999px;
-  color: #fff;
-  font-weight: 800;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
-  opacity: 0;
-  transform: translateY(8px);
-  transition:
-    opacity 0.25s,
-    transform 0.25s;
-}
-.group:hover .add-fab {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-/* لمس الموبايل: أظهر زر الإضافة دائمًا وألغ تكبير الصورة */
-@media (hover: none) and (pointer: coarse) {
-  .add-fab {
-    opacity: 1;
-    transform: translateY(0);
-  }
-  .card-base:hover .card-img {
-    transform: none;
-  }
-}
-
-/* safe area للأسفل عند ظهور السلة */
+/* زر السلة العائم — يسار */
 :root {
   --safe-bottom: env(safe-area-inset-bottom, 0);
 }
-.cartbar {
-  padding-bottom: max(0px, var(--safe-bottom));
-}
 
-/* cart bump */
-.cartbar {
+.cart-fab {
+  bottom: calc(18px + var(--safe-bottom));
+  left: 16px; /* يسار */
+  width: 62px;
+  height: 62px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  position: fixed;
+  background: radial-gradient(
+    120% 120% at 30% 20%,
+    rgba(255, 255, 255, 0.75),
+    rgba(255, 255, 255, 0.55) 60%,
+    rgba(255, 255, 255, 0.35)
+  );
+  box-shadow:
+    0 14px 34px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    inset 0 -2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(17, 24, 39, 0.06);
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
   transform: translateZ(0);
+  z-index: 60;
 }
-.cartbar.bump {
-  animation: bump 0.35s ease;
+.cart-fab .icon {
+  font-size: 20px;
 }
-@keyframes bump {
+.cart-fab .shine {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.85), transparent 40%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0));
+  mix-blend-mode: screen;
+  opacity: 0.8;
+}
+.cart-fab .badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: #fff;
+  font-size: 12px;
+  line-height: 22px;
+  text-align: center;
+  border-radius: 9999px;
+  box-shadow: 0 8px 18px rgba(220, 38, 38, 0.35);
+  transform: scale(0.7);
+  opacity: 0;
+  transition:
+    transform 0.2s,
+    opacity 0.2s;
+}
+.badge-show {
+  transform: scale(1);
+  opacity: 1;
+}
+.fab-active {
+  opacity: 1;
+}
+.fab-disabled {
+  opacity: 0.65;
+}
+.fab-bump {
+  animation: fabbump 0.42s ease;
+}
+@keyframes fabbump {
   0% {
     transform: scale(1);
   }
-  50% {
-    transform: scale(1.02);
+  35% {
+    transform: scale(1.08);
   }
   100% {
     transform: scale(1);
   }
-}
-.line .qty {
-  display: inline-block;
-  animation: qtypop 0.25s ease;
-}
-@keyframes qtypop {
-  from {
-    transform: scale(0.8);
-    opacity: 0.6;
-  }
-  to {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
-/* مناطق لمس مريحة */
-button {
-  min-height: 44px;
-  min-width: 44px;
 }
 
 /* fade */
@@ -887,13 +872,5 @@ button {
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
-}
-
-/* تقليل الحركة عند تفضيل المستخدم */
-@media (prefers-reduced-motion: reduce) {
-  * {
-    animation: none !important;
-    transition: none !important;
-  }
 }
 </style>
