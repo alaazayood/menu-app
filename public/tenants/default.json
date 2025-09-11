@@ -3,7 +3,7 @@
   "brand": { "name_ar": "كرم الشام", "name_en": "Karam Al Sham" },
   "theme": { "primary": "#f97316", "secondary": "#fb923c" },
   "business": { "currency": "AED", "tax_rate": 0, "service_fee": 0 },
-  "contact": { "whatsapp_e164": "+963939048805" },
+  "contact": { "whatsapp_e164": "+963966262458" },
 
   "menu": {
     "categories": [
@@ -128,7 +128,8 @@
         "name_ar": "شوربة عدس",
         "name_en": "Lentil soup",
         "price": 10,
-        "available": true
+        "available": true,
+        "image_url": "images/img10.jpg"
       },
       {
         "id": "soup_mushroom",
@@ -136,7 +137,8 @@
         "name_ar": "شوربة فطر",
         "name_en": "Mushroom soup",
         "price": 10,
-        "available": true
+        "available": true,
+        "image_url": "images/img1.jpg"
       },
 
       {
