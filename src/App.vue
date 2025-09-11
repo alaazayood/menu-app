@@ -133,10 +133,8 @@
         <article
           v-for="(p, idx) in filteredProducts"
           :key="p.id"
-          class="js-card group card-base"
-          :data-id="p.id"
+          class="group card-base"
           :style="{ '--stagger': (idx % 12) * 60 + 'ms' }"
-          :class="{ 'in-view': inView[p.id] }"
         >
           <div class="relative h-48 sm:h-52 overflow-hidden">
             <img
@@ -154,6 +152,7 @@
               <span v-if="fabPing" class="ping"></span>
             </button>
           </div>
+
           <div class="p-4">
             <h3 class="font-bold text-lg text-gray-800 mb-1">
               {{ currentLanguage === 'ar' ? p.name_ar : p.name_en || p.name_ar }}
@@ -163,6 +162,7 @@
                 currentLanguage === 'ar' ? p.description_ar : p.description_en || p.description_ar
               }}
             </p>
+
             <div class="flex items-center justify-between">
               <span class="text-xs text-transparent">#{{ p.id }}</span>
               <div class="flex items-center gap-2">
@@ -722,19 +722,26 @@ function formatPrice(n) {
   }
 }
 
-/* Cards */
+/* بطاقة: مرئية دائمًا + دخول لطيف عند الظهور */
 .card-base {
   background: rgba(255, 255, 255, 0.92);
   border-radius: 24px;
   overflow: hidden;
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
-  transform: translateY(14px) scale(0.98);
-  opacity: 0;
-  transition:
-    transform 0.6s cubic-bezier(0.2, 0.7, 0.2, 1),
-    opacity 0.6s;
-  transition-delay: var(--stagger, 0ms);
+  animation: fadeUp 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation-delay: var(--stagger, 0ms);
 }
+@keyframes fadeUp {
+  0% {
+    transform: translateY(14px) scale(0.98);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
 .card-base.in-view {
   transform: translateY(0) scale(1);
   opacity: 1;
