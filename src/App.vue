@@ -1,5 +1,5 @@
 <template>
-  <!-- سكيلتون -->
+  <!-- سكيلتون تحميل -->
   <div
     v-if="status === 'loading'"
     class="min-h-screen bg-[linear-gradient(135deg,#fff7ed,35%,#fde68a)]"
@@ -24,7 +24,7 @@
     </main>
   </div>
 
-  <!-- خطأ -->
+  <!-- رسالة خطأ -->
   <div v-else-if="status === 'error'" class="p-8 text-center text-red-600" :dir="dir">
     {{ t('error') }}
     <pre class="mt-2 bg-white p-3 rounded-md shadow overflow-x-auto text-left text-xs">{{
@@ -43,17 +43,40 @@
     :class="[dir === 'rtl' ? 'text-right' : 'text-left']"
   >
     <!-- هيدر -->
-    <AppHeader
-      :brand-name="brandName"
-      :brand-logo="resolveAsset(tenant.brand?.logo)"
-      :tagline="tenant.brand?.tagline || t('tagline')"
-      :theme-primary="themePrimary"
-      :current-language="currentLanguage"
-      :dir="dir"
-      @toggle-language="toggleLanguage"
-    />
+    <header class="sticky top-0 z-20 glass border-b">
+      <div class="container mx-auto px-4 py-3 flex items-center justify-between">
+        <button
+          @click="toggleLanguage"
+          class="px-3 py-1 rounded-full border text-sm"
+          :style="{ borderColor: themePrimary }"
+        >
+          {{ currentLanguage === 'ar' ? 'EN' : 'AR' }}
+        </button>
+        <div class="flex items-center gap-3">
+          <div
+            v-if="tenant.brand?.logo"
+            class="w-12 h-12 rounded-2xl overflow-hidden ring-1 ring-black/5 shadow"
+          >
+            <img
+              :src="resolveAsset(tenant.brand.logo)"
+              :alt="brandName"
+              class="w-full h-full object-cover"
+              @error="onImgError"
+            />
+          </div>
+          <div class="text-center">
+            <h1 class="text-2xl sm:text-3xl font-extrabold" :style="{ color: themePrimary }">
+              {{ brandName }}
+            </h1>
+            <p class="text-xs sm:text-sm text-gray-500">
+              {{ tenant.brand?.tagline || t('tagline') }}
+            </p>
+          </div>
+        </div>
+      </div>
+    </header>
 
-    <!-- بحث -->
+    <!-- شريط البحث -->
     <div v-if="products.length > 5" class="sticky top-[68px] sm:top-[72px] z-10 glass border-b">
       <div class="container mx-auto px-4 py-2">
         <div class="relative">
@@ -88,103 +111,217 @@
     </div>
 
     <!-- تبويبات -->
-    <CategoryTabs
-      v-model:activeId="activeCat"
-      :tabs="tabs"
-      :current-language="currentLanguage"
-      :theme-primary="themePrimary"
-      :theme-secondary="themeSecondary"
-      :dir="dir"
-    />
+    <nav v-if="tabs.length" class="sticky top-[108px] sm:top-[112px] z-10 glass border-b">
+      <div class="container mx-auto px-4 py-2">
+        <ul class="flex gap-2 overflow-x-auto no-scrollbar">
+          <li v-for="c in tabs" :key="c.id">
+            <button
+              @click="activeCat = c.id"
+              class="px-4 py-2 rounded-full text-sm font-bold transition-all"
+              :style="tabStyle(c.id)"
+            >
+              {{ currentLanguage === 'ar' ? c.name_ar : c.name_en || c.name_ar }}
+            </button>
+          </li>
+        </ul>
+      </div>
+    </nav>
 
     <!-- المنتجات -->
     <main class="container mx-auto px-4 py-8">
       <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        <ProductCard
+        <article
           v-for="(p, idx) in filteredProducts"
           :key="p.id"
-          :image-url="resolveImg(p)"
-          :title="currentLanguage === 'ar' ? p.name_ar : p.name_en || p.name_ar"
-          :desc="currentLanguage === 'ar' ? p.description_ar : p.description_en || p.description_ar"
-          :sku="p.id"
-          :price="p.price"
-          :currency="currency"
-          :add-label="t('add')"
-          :btn-style="btnStyle"
-          :theme-primary="themePrimary"
-          :in-view="inView[p.id]"
-          :stagger-ms="(idx % 12) * 60"
-          :dir="dir"
-          @add="onAddClick(p)"
-          @dec="decFromGrid(p)"
-        />
+          class="js-card group card-base"
+          :data-id="p.id"
+          :style="{ '--stagger': (idx % 12) * 60 + 'ms' }"
+          :class="{ 'in-view': inView[p.id] }"
+        >
+          <div class="relative h-48 sm:h-52 overflow-hidden">
+            <img
+              :src="resolveImg(p)"
+              :alt="currentLanguage === 'ar' ? p.name_ar : p.name_en || p.name_ar"
+              class="w-full h-full object-cover card-img"
+              @error="onImgError"
+              loading="lazy"
+            />
+            <div class="price-badge" :style="{ color: themePrimary }">
+              {{ formatPrice(p.price) }} {{ currency }}
+            </div>
+            <button class="add-fab" :style="btnStyle" @click="onAddClick(p)">
+              {{ t('add') }}
+              <span v-if="fabPing" class="ping"></span>
+            </button>
+          </div>
+          <div class="p-4">
+            <h3 class="font-bold text-lg text-gray-800 mb-1">
+              {{ currentLanguage === 'ar' ? p.name_ar : p.name_en || p.name_ar }}
+            </h3>
+            <p v-if="p.description_ar || p.description_en" class="text-sm text-gray-600 mb-3">
+              {{
+                currentLanguage === 'ar' ? p.description_ar : p.description_en || p.description_ar
+              }}
+            </p>
+            <div class="flex items-center justify-between">
+              <span class="text-xs text-transparent">#{{ p.id }}</span>
+              <div class="flex items-center gap-2">
+                <button
+                  class="px-3 py-2 rounded-full border text-sm font-semibold hover:bg-gray-50 active:scale-95 transition"
+                  @click="decFromGrid(p)"
+                >
+                  −
+                </button>
+                <button
+                  class="px-4 py-2 rounded-full text-white font-bold soft-shadow active:scale-95 transition"
+                  :style="btnStyle"
+                  @click="onAddClick(p)"
+                >
+                  {{ t('add') }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </article>
       </div>
       <p v-if="!filteredProducts.length" class="text-center text-gray-500 py-16">
         {{ t('noProducts') }}
       </p>
     </main>
 
-    <!-- السلة -->
-    <CartBar
-      :cart="cart"
-      :item-count="itemCount"
-      :subtotal="subtotal"
-      :tax="tax"
-      :total="total"
-      :vat-rate="vatRate"
-      :currency="currency"
-      :total-formatted="formatPrice(total) + ' ' + currency"
-      :labels="{
-        items: t('items'),
-        total: t('total'),
-        includesVat: t('includesVat'),
-        sendWhatsApp: t('sendWhatsApp'),
-      }"
-      :btn-style="btnStyle"
-      :bump="cartBump"
-      :dir="dir"
-      @inc="incQty"
-      @dec="decQty"
-      @checkout="openCheckout"
-    />
-
-    <!-- نافذة التأكيد -->
-    <CheckoutSheet
-      v-model:open="checkoutOpen"
-      :initial="customer"
-      :cart="cart"
-      :currency="currency"
-      :vat-rate="vatRate"
-      :subtotal="subtotal"
-      :tax="tax"
-      :total="total"
-      :btn-style="btnStyle"
-      :dir="dir"
-      :locale="currentLanguage === 'ar' ? 'ar' : 'en'"
-      :labels="checkoutLabels"
-      @submit="handleCheckoutSubmit"
-    />
-
-    <!-- Toast -->
+    <!-- شريط السلة + زر Checkout -->
     <div
-      v-if="toast.show"
-      class="fixed bottom-20 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full text-white font-semibold soft-shadow"
-      :style="btnStyle"
+      v-if="cart.length"
+      :class="['fixed bottom-0 left-0 right-0 glass border-t cartbar', { bump: cartBump }]"
     >
-      {{ toast.text }}
+      <div class="container mx-auto px-4 py-3">
+        <div class="flex items-center gap-3 overflow-x-auto pb-2">
+          <div
+            v-for="it in cart"
+            :key="it.key"
+            class="glass border rounded-2xl px-3 py-2 flex items-center gap-2 soft-shadow line"
+          >
+            <span class="font-semibold text-sm max-w-[160px] truncate">{{ it.name }}</span>
+            <div class="flex items-center gap-1">
+              <button
+                class="px-2 py-1 rounded-full border active:scale-95 transition"
+                @click="decQty(it)"
+              >
+                −
+              </button>
+              <span class="w-6 text-center qty" :key="it.qty">{{ it.qty }}</span>
+              <button
+                class="px-2 py-1 rounded-full border active:scale-95 transition"
+                @click="incQty(it)"
+              >
+                +
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-1 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div class="text-sm">
+            {{ t('items') }}: {{ itemCount }} · {{ t('total') }}:
+            <span class="font-bold">{{ formatPrice(total) }} {{ currency }}</span>
+            <span v-if="vatRate"> ({{ t('includesVat') }} {{ (vatRate * 100).toFixed(0) }}%)</span>
+          </div>
+          <button
+            class="inline-block text-white font-bold px-5 py-2 rounded-full soft-shadow text-center active:scale-95 transition"
+            :style="btnStyle"
+            @click="openCheckout"
+          >
+            {{ t('sendWhatsApp') }}
+          </button>
+        </div>
+      </div>
     </div>
+
+    <!-- نافذة Checkout داخلية (اسم/موقع/ملاحظة) -->
+    <transition name="fade">
+      <div
+        v-if="showCheckout"
+        class="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+      >
+        <div class="absolute inset-0 bg-black/40" @click="showCheckout = false"></div>
+        <div
+          class="relative w-full sm:w-[520px] bg-white rounded-t-3xl sm:rounded-3xl shadow-xl p-5 sm:p-6"
+        >
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-xl font-extrabold">{{ t('newOrder') }}</h3>
+            <button class="px-3 py-1 rounded-full border text-sm" @click="showCheckout = false">
+              ✕
+            </button>
+          </div>
+          <div class="space-y-3">
+            <div>
+              <label class="block text-sm mb-1">{{ t('name') }}</label>
+              <input
+                v-model="customer.name"
+                type="text"
+                class="w-full px-4 py-2 rounded-xl border"
+              />
+            </div>
+            <div>
+              <label class="block text-sm mb-1">{{ t('location') }}</label>
+              <input
+                v-model="customer.location"
+                type="text"
+                class="w-full px-4 py-2 rounded-xl border"
+              />
+            </div>
+            <div>
+              <label class="block text-sm mb-1">{{ t('note') }}</label>
+              <textarea
+                v-model="customer.note"
+                rows="2"
+                class="w-full px-4 py-2 rounded-xl border resize-none"
+              ></textarea>
+            </div>
+
+            <div
+              class="flex items-center justify-between text-sm bg-gray-50 p-3 rounded-2xl border"
+            >
+              <span>{{ t('total') }}</span>
+              <b>{{ formatPrice(total) }} {{ currency }}</b>
+            </div>
+
+            <button
+              class="w-full text-white font-bold px-5 py-3 rounded-2xl soft-shadow active:scale-95 transition"
+              :style="btnStyle"
+              :disabled="sending"
+              @click="confirmAndSend"
+            >
+              <span v-if="sending">{{ t('loading') }}</span>
+              <span v-else>{{ t('sendWhatsApp') }}</span>
+            </button>
+            <p v-if="sendError" class="text-xs text-red-600">{{ sendError }}</p>
+          </div>
+        </div>
+      </div>
+    </transition>
+
+    <!-- شاشة انتظار التأكيد -->
+    <OrderWaitScreen
+      :show="wait.show"
+      :order-id="wait.id"
+      :eta="wait.eta"
+      :business-hours="wait.hours"
+      :wa-link="lastWaLink"
+      :phone-display="tenant?.contact?.phone_display || ''"
+      :table="tableParam || ''"
+      :btn-style="btnStyle"
+      :lang="currentLanguage"
+      @close="wait.show = false"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, computed, onMounted, nextTick, watch } from 'vue'
-import AppHeader from '@/components/AppHeader.vue'
-import CategoryTabs from '@/components/CategoryTabs.vue'
-import ProductCard from '@/components/ProductCard.vue'
-import CartBar from '@/components/CartBar.vue'
-import CheckoutSheet from '@/components/CheckoutSheet.vue'
+import OrderWaitScreen from './components/OrderWaitScreen.vue'
 
-/* ===== ترجمة ===== */
+/* ===== ترجمة بسيطة ===== */
 const translations = {
   ar: {
     appTitle: 'قائمة طعام إلكترونية',
@@ -207,9 +344,6 @@ const translations = {
     grandTotal: 'الإجمالي',
     newOrder: 'طلب جديد',
     searchPlaceholder: 'ابحث عن منتج...',
-    confirmSend: 'إرسال عبر واتساب',
-    cancel: 'إلغاء',
-    checkoutTitle: 'أكمل بيانات الطلب',
   },
   en: {
     appTitle: 'Digital Menu',
@@ -232,9 +366,6 @@ const translations = {
     grandTotal: 'Total',
     newOrder: 'New Order',
     searchPlaceholder: 'Search for a product...',
-    confirmSend: 'Send via WhatsApp',
-    cancel: 'Cancel',
-    checkoutTitle: 'Complete order details',
   },
 }
 const currentLanguage = ref('ar')
@@ -242,41 +373,24 @@ const dir = computed(() => (currentLanguage.value === 'ar' ? 'rtl' : 'ltr'))
 const t = (k) => translations[currentLanguage.value][k] || k
 function toggleLanguage() {
   currentLanguage.value = currentLanguage.value === 'ar' ? 'en' : 'ar'
-  try {
-    localStorage.setItem('lang', currentLanguage.value)
-  } catch {
-    /* empty */
-  }
 }
 
-/* ===== مسارات BASE-aware ===== */
-const BASE = import.meta.env.BASE_URL
-const withBase = (p) => {
-  if (!p) return ''
-  if (/^(https?:)?\/\//i.test(p) || p.startsWith('data:')) return p
-  if (p.startsWith('/')) return BASE + p.slice(1)
-  return BASE + p.replace(/^\.?\//, '')
-}
-function resolveAsset(p) {
-  return withBase(p)
-}
-const PLACEHOLDER =
-  'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="400"><rect width="100%" height="100%" fill="%23f3f4f6"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%239ca3af" font-size="24">No Image</text></svg>'
-function resolveImg(p) {
-  return p?.image_url ? withBase(p.image_url) : PLACEHOLDER
-}
+/* ===== قراءة tenant & table من الـ URL ===== */
+const url = new URL(window.location.href)
+const tenantIdFromUrl = url.searchParams.get('tenant') || 'default'
+const tableParam = url.searchParams.get('table') || ''
 
-/* ===== تحميل بيانات المطعم (Multi-Tenant) ===== */
+/* ===== تحميل بيانات المطعم ===== */
 const status = ref('loading')
 const tenant = ref(null)
 const errorMsg = ref('')
 const searchQuery = ref('')
 
-async function fetchWithTimeout(url, ms = 6000) {
+async function fetchWithTimeout(u, ms = 6000) {
   const ctrl = new AbortController()
   const t = setTimeout(() => ctrl.abort('timeout'), ms)
   try {
-    return await fetch(url, { cache: 'no-store', signal: ctrl.signal })
+    return await fetch(u, { cache: 'no-store', signal: ctrl.signal })
   } finally {
     clearTimeout(t)
   }
@@ -284,29 +398,14 @@ async function fetchWithTimeout(url, ms = 6000) {
 async function loadTenant() {
   status.value = 'loading'
   errorMsg.value = ''
-
-  const params = new URLSearchParams(location.search)
-  const key = (params.get('tenant') || 'default').trim().toLowerCase()
-  const base = BASE.endsWith('/') ? BASE : BASE + '/'
-  const candidate = `${base}tenants/${key}.json`
-  const fallback = `${base}tenants/default.json`
-  const tries = [candidate, './tenants/' + key + '.json', fallback, './tenants/default.json']
-
+  const tries = [`/tenants/${tenantIdFromUrl}.json`, '/tenants/default.json']
   for (const u of tries) {
     try {
-      const r = await fetchWithTimeout(u, 6000)
+      const r = await fetchWithTimeout(u, 7000)
       const raw = await r.text()
       if (!r.ok) throw new Error(`HTTP ${r.status}: ${raw.slice(0, 200)}`)
       tenant.value = JSON.parse(raw)
       status.value = 'ok'
-      try {
-        const brand = tenant.value?.brand
-        const name =
-          currentLanguage.value === 'ar' ? brand?.name_ar : brand?.name_en || brand?.name_ar
-        document.title = name ? `${name} · Menu` : 'Menu'
-      } catch {
-        /* empty */
-      }
       await nextTick()
       initCardObserver()
       return
@@ -316,24 +415,9 @@ async function loadTenant() {
   }
   status.value = 'error'
 }
-onMounted(() => {
-  try {
-    const saved = localStorage.getItem('lang')
-    if (saved === 'ar' || saved === 'en') currentLanguage.value = saved
-  } catch {
-    /* empty */
-  }
-  // حمّل بيانات العميل السابقة (إن وجدت)
-  try {
-    const raw = localStorage.getItem('customerInfo')
-    if (raw) Object.assign(customer, JSON.parse(raw))
-  } catch {
-    /* empty */
-  }
-  loadTenant()
-})
+onMounted(loadTenant)
 
-/* ===== ثيم وبيانات عامة ===== */
+/* ===== ثيم/معلومات عامة ===== */
 const brandName = computed(() => {
   const b = tenant.value?.brand
   return currentLanguage.value === 'ar' ? b?.name_ar : b?.name_en || b?.name_ar || 'Restaurant'
@@ -343,55 +427,49 @@ const vatRate = computed(() => Number(tenant.value?.business?.tax_rate || 0))
 const themePrimary = computed(() => tenant.value?.theme?.primary || '#f97316')
 const themeSecondary = computed(() => tenant.value?.theme?.secondary || '#fb923c')
 const btnStyle = computed(() => ({
-  background: `linear-gradient(90deg, ${themePrimary.value}, ${themeSecondary.value})`,
+  background: `linear-gradient(90deg,${themePrimary.value},${themeSecondary.value})`,
 }))
 
-/* ===== تبويبات / فلترة ===== */
-const norm = (s) =>
-  String(s ?? '')
-    .trim()
-    .toLowerCase()
+/* ===== تبويبات/فلترة ===== */
+const cats = computed(() => {
+  const arr = tenant.value?.menu?.categories ? [...tenant.value.menu.categories] : []
+  arr.sort((a, b) => (a.order || 0) - (b.order || 0))
+  return arr
+})
+const tabs = computed(() => [
+  { id: 'all', name_ar: t('allCategories'), name_en: t('allCategories') },
+  ...cats.value,
+])
+const activeCat = ref('all')
 const products = computed(() =>
   (tenant.value?.menu?.products || []).filter((p) => p.available !== false),
 )
-const tabs = computed(() => {
-  const cats = (tenant.value?.menu?.categories || [])
-    .slice()
-    .sort((a, b) => (a.order || 0) - (b.order || 0))
-  const has = new Set(products.value.map((p) => norm(p.category_id)))
-  const visible = cats.filter((c) => has.has(norm(c.id)))
-  return [{ id: 'all', name_ar: t('allCategories'), name_en: t('All') }, ...visible]
-})
-const activeCat = ref('all')
 const filteredProducts = computed(() => {
-  let list =
+  let f =
     activeCat.value === 'all'
       ? products.value
-      : products.value.filter((p) => norm(p.category_id) === norm(activeCat.value))
+      : products.value.filter((p) => p.category_id === activeCat.value)
   if (searchQuery.value) {
-    const q = norm(searchQuery.value)
-    list = list.filter(
+    const q = searchQuery.value.toLowerCase()
+    f = f.filter(
       (p) =>
-        norm(p.name_ar).includes(q) ||
-        norm(p.name_en).includes(q) ||
-        norm(p.description_ar).includes(q) ||
-        norm(p.description_en).includes(q),
+        p.name_ar?.toLowerCase().includes(q) ||
+        p.name_en?.toLowerCase().includes(q) ||
+        p.description_ar?.toLowerCase().includes(q) ||
+        p.description_en?.toLowerCase().includes(q),
     )
   }
-  return list
+  return f
 })
 
-/* ===== سلة ===== */
-const cart = reactive([]) // [{ key, sku, name, unitPrice, qty }]
+/* ===== السلة ===== */
+const cart = reactive([]) // { key, sku, name, unitPrice, qty }
 const cartBump = ref(false)
 const toast = reactive({ show: false, text: '' })
-const itemCount = computed(() => cart.reduce((a, c) => a + c.qty, 0))
-const subtotal = computed(() => cart.reduce((s, it) => s + it.unitPrice * it.qty, 0))
-const tax = computed(() => +(subtotal.value * vatRate.value).toFixed(2))
-const total = computed(() => subtotal.value + tax.value)
+const fabPing = ref(false)
 
-function showToast(text) {
-  toast.text = text
+function showToast(s) {
+  toast.text = s
   toast.show = true
   setTimeout(() => (toast.show = false), 1200)
 }
@@ -403,23 +481,25 @@ function bump() {
   })
 }
 
+function onAddClick(p) {
+  addToCart(p)
+  showToast(t('add') + ' ' + (currentLanguage.value === 'ar' ? p.name_ar : p.name_en || p.name_ar))
+  fabPing.value = true
+  setTimeout(() => (fabPing.value = false), 500)
+}
 function addToCart(p) {
   const key = p.id + '::{}'
   const name = currentLanguage.value === 'ar' ? p.name_ar : p.name_en || p.name_ar
   const found = cart.find((it) => it.key === key)
-  if (found) found.qty += 1
+  if (found) found.qty++
   else cart.push({ key, sku: p.id, name, unitPrice: Number(p.price) || 0, qty: 1 })
   bump()
 }
-function onAddClick(p) {
-  addToCart(p)
-  showToast(t('add') + ' ' + (currentLanguage.value === 'ar' ? p.name_ar : p.name_en || p.name_ar))
-}
 function decFromGrid(p) {
   const key = p.id + '::{}'
-  const found = cart.find((it) => it.key === key)
-  if (!found) return
-  found.qty > 1 ? found.qty-- : removeLine(found)
+  const f = cart.find((it) => it.key === key)
+  if (!f) return
+  f.qty > 1 ? f.qty-- : removeLine(f)
   bump()
 }
 function incQty(it) {
@@ -434,79 +514,174 @@ function removeLine(it) {
   if (i >= 0) cart.splice(i, 1)
 }
 
-/* ===== بيانات العميل + واتساب ===== */
-const checkoutOpen = ref(false)
-const customer = reactive({ name: '', location: '', note: '' })
-const checkoutLabels = computed(() => ({
-  title: t('checkoutTitle'),
-  orderSummary: currentLanguage.value === 'ar' ? 'ملخص الطلب' : 'Order Summary',
-  qty: currentLanguage.value === 'ar' ? 'الكمية' : 'Qty',
-  unitPrice: currentLanguage.value === 'ar' ? 'سعر الوحدة' : 'Unit price',
-  subtotal: t('subtotal'),
-  tax: t('tax'),
-  grandTotal: t('grandTotal'),
-  name: t('name'),
-  namePh: currentLanguage.value === 'ar' ? 'اكتب اسمك' : 'Enter your name',
-  location: t('location'),
-  locationPh:
-    currentLanguage.value === 'ar'
-      ? 'مثال: الشارقة - القاسمية - بناية ...'
-      : 'Example: Sharjah - Al Qasimia - Building ...',
-  note: t('note'),
-  notePh:
-    currentLanguage.value === 'ar' ? 'تعليمات خاصة للتوصيل (اختياري)' : 'Delivery note (optional)',
-  total: t('total'),
-  cancel: t('cancel'),
-  confirm: t('confirmSend'),
-}))
+const itemCount = computed(() => cart.reduce((a, c) => a + c.qty, 0))
+const subtotal = computed(() => cart.reduce((s, it) => s + it.unitPrice * it.qty, 0))
+const tax = computed(() => +(subtotal.value * vatRate.value).toFixed(2))
+const total = computed(() => subtotal.value + tax.value)
 
+/* ===== تفاصيل العميل (Checkout) ===== */
+const showCheckout = ref(false)
+const sending = ref(false)
+const sendError = ref('')
+const customer = reactive({
+  name: localStorage.getItem('cust_name') || '',
+  location: localStorage.getItem('cust_loc') || '',
+  note: localStorage.getItem('cust_note') || '',
+})
 function openCheckout() {
-  if (!cart.length) return
-  checkoutOpen.value = true
+  showCheckout.value = true
 }
+watch(
+  () => customer.name,
+  (v) => localStorage.setItem('cust_name', v || ''),
+)
+watch(
+  () => customer.location,
+  (v) => localStorage.setItem('cust_loc', v || ''),
+)
+watch(
+  () => customer.note,
+  (v) => localStorage.setItem('cust_note', v || ''),
+)
 
-function buildWaLink(info) {
+/* ===== توليد Order ID + منع تكرار الإرسال + شاشة انتظار ===== */
+const wait = reactive({ show: false, id: '', eta: '', hours: '' })
+const lastWaLink = ref('#')
+function generateOrderId(prefix = 'ORD') {
+  const d = new Date()
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  const hm = String(d.getHours()).padStart(2, '0') + String(d.getMinutes()).padStart(2, '0')
+  const k = 'seq_' + y + m + day
+  const seq = +(localStorage.getItem(k) || '0') + 1
+  localStorage.setItem(k, String(seq))
+  return `${prefix}-${y}${m}${day}-${hm}-${String(seq).padStart(2, '0')}`
+}
+const cooldownMs = 3500
+let lastSentAt = 0
+
+function buildWaLinkWithOrder(orderId) {
   if (!tenant.value || !cart.length) return '#'
   const cur = currency.value
   const brand = brandName.value
   const lines = []
-  lines.push(`${brand} - ${t('newOrder')}`, '')
+  lines.push(`${brand} - ${t('newOrder')}`)
+  lines.push(`Order: ${orderId}`)
+  if (tableParam) lines.push(`Table: ${tableParam}`)
+  lines.push('')
+
   for (const it of cart)
     lines.push(`- ${it.name} ×${it.qty} = ${formatPrice(it.unitPrice * it.qty)} ${cur}`)
+
   if (vatRate.value) {
     lines.push('', `${t('subtotal')}: ${formatPrice(subtotal.value)} ${cur}`)
     lines.push(`${t('tax')}: ${formatPrice(tax.value)} ${cur}`)
   }
-  lines.push(
-    `${t('grandTotal')}: ${formatPrice(total.value)} ${cur}`,
-    '',
-    `${t('name')}: ${info?.name || '—'}`,
-    `${t('location')}: ${info?.location || '—'}`,
-    `${t('note')}: ${info?.note || '—'}`,
-  )
+  lines.push(`${t('grandTotal')}: ${formatPrice(total.value)} ${cur}`, '')
+
+  lines.push(`${t('name')}: ${customer.name || '—'}`)
+  lines.push(`${t('location')}: ${customer.location || '—'}`)
+  lines.push(`${t('note')}: ${customer.note || '—'}`)
+
   const text = encodeURIComponent(lines.join('\n'))
   const phone = (tenant.value?.contact?.whatsapp_e164 || '').replace('+', '')
   return phone ? `https://wa.me/${phone}?text=${text}` : '#'
 }
-function handleCheckoutSubmit(info) {
-  Object.assign(customer, info || {})
-  try {
-    localStorage.setItem('customerInfo', JSON.stringify(customer))
-  } catch {
-    /* empty */
-  }
-  const link = buildWaLink(customer)
-  if (link === '#') {
-    showToast(
-      currentLanguage.value === 'ar'
-        ? 'يرجى ضبط رقم واتساب في الإعدادات'
-        : 'Please set WhatsApp number',
-    )
+
+async function confirmAndSend() {
+  sendError.value = ''
+  if (!cart.length) {
+    sendError.value = 'السلة فارغة.'
     return
   }
-  window.open(link, '_blank')
+  const now = Date.now()
+  if (now - lastSentAt < cooldownMs) {
+    sendError.value = 'حاول بعد ثوانٍ قليلة.'
+    return
+  }
+
+  // رقم الطلب
+  const prefix = tenant.value?.order_policy?.tenant_prefix || 'ORD'
+  const orderId = generateOrderId(prefix)
+  localStorage.setItem('last_order_id', orderId)
+
+  // رابط واتساب
+  const link = buildWaLinkWithOrder(orderId)
+  lastWaLink.value = link
+
+  // فتح واتساب
+  sending.value = true
+  try {
+    window.open(link, '_blank')
+  } finally {
+    sending.value = false
+    lastSentAt = now
+    showCheckout.value = false
+
+    // إعداد شاشة الانتظار
+    wait.id = orderId
+    wait.eta = tenant.value?.order_policy?.eta_minutes || ''
+    wait.hours = tenant.value?.order_policy?.business_hours || ''
+    if (tenant.value?.order_policy?.needs_confirmation !== false) {
+      wait.show = true
+    }
+  }
 }
 
+/* ===== صور/أصول (نسخة أبسط وأأمن) ===== */
+const PLACEHOLDER =
+  'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="400"><rect width="100%" height="100%" fill="%23f3f4f6"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%239ca3af" font-size="24">No Image</text></svg>'
+
+function resolveImg(p) {
+  if (p?.image_url) return p.image_url
+  if (p?.image) return 'images/' + p.image
+  return PLACEHOLDER
+}
+
+function resolveAsset(s) {
+  if (!s) return ''
+  if (/^(https?:)?\/\//i.test(s) || s.startsWith('data:')) return s
+  if (s.startsWith('/')) return s
+  // ازل ./ أو / في بداية المسار ثم أضف /
+  return '/' + s.replace(/^\.?\//, '')
+}
+
+function onImgError(e) {
+  e.target.src = PLACEHOLDER
+  e.target.onerror = null
+}
+
+/* ===== ظهور البطاقات عند التمرير ===== */
+const inView = reactive({})
+function initCardObserver() {
+  const cards = Array.from(document.querySelectorAll('.js-card'))
+  if (!cards.length) return
+  const ob = new IntersectionObserver(
+    (ents) => {
+      ents.forEach((e) => {
+        const id = e.target.getAttribute('data-id')
+        if (e.isIntersecting) {
+          inView[id] = true
+          ob.unobserve(e.target)
+        }
+      })
+    },
+    { rootMargin: '0px 0px -10% 0px', threshold: 0.1 },
+  )
+  cards.forEach((el) => ob.observe(el))
+}
+
+/* ===== أدوات عرض ===== */
+function tabStyle(id) {
+  const active = activeCat.value === id
+  return active
+    ? {
+        background: `linear-gradient(90deg,${themePrimary.value},${themeSecondary.value})`,
+        color: '#fff',
+      }
+    : { border: '1px solid #e5e7eb', color: '#111827', background: '#fff' }
+}
 function formatPrice(n) {
   try {
     return new Intl.NumberFormat(currentLanguage.value === 'ar' ? 'ar' : 'en', {
@@ -516,44 +691,6 @@ function formatPrice(n) {
     return n
   }
 }
-
-/* ===== ظهور البطاقات (IO) ===== */
-const inView = reactive({})
-let io = null
-function initCardObserver() {
-  if (io) {
-    io.disconnect()
-    io = null
-  }
-  const cards = Array.from(document.querySelectorAll('.card-base'))
-  if (!cards.length) return
-  if (typeof window !== 'undefined' && !('IntersectionObserver' in window)) {
-    cards.forEach((el) => {
-      const sku = el.getAttribute('data-sku')
-      if (sku) inView[sku] = true
-    })
-    return
-  }
-  io = new IntersectionObserver(
-    (entries) => {
-      entries.forEach((e) => {
-        if (!e.isIntersecting) return
-        const sku = e.target.getAttribute('data-sku')
-        if (sku) inView[sku] = true
-        io.unobserve(e.target)
-      })
-    },
-    { rootMargin: '0px 0px -10% 0px', threshold: 0.1 },
-  )
-  cards.forEach((el) => {
-    const sku = el.getAttribute('data-sku')
-    if (sku && !inView[sku]) io.observe(el)
-  })
-}
-watch([activeCat, searchQuery, filteredProducts], async () => {
-  await nextTick()
-  initCardObserver()
-})
 </script>
 
 <style scoped>
@@ -568,6 +705,8 @@ watch([activeCat, searchQuery, filteredProducts], async () => {
 .soft-shadow {
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
 }
+
+/* Skeleton */
 .skeleton {
   position: relative;
   background: linear-gradient(90deg, #f3f4f6 20%, #e5e7eb 35%, #f3f4f6 60%);
@@ -582,6 +721,8 @@ watch([activeCat, searchQuery, filteredProducts], async () => {
     background-position: -200% 0;
   }
 }
+
+/* Cards */
 .card-base {
   background: rgba(255, 255, 255, 0.92);
   border-radius: 24px;
@@ -604,6 +745,8 @@ watch([activeCat, searchQuery, filteredProducts], async () => {
 .card-base:hover .card-img {
   transform: scale(1.06);
 }
+
+/* Price badge */
 .price-badge {
   position: absolute;
   top: 0.75rem;
@@ -626,6 +769,8 @@ watch([activeCat, searchQuery, filteredProducts], async () => {
     opacity: 1;
   }
 }
+
+/* Add FAB */
 .add-fab {
   position: absolute;
   bottom: 0.75rem;
@@ -645,12 +790,8 @@ watch([activeCat, searchQuery, filteredProducts], async () => {
   opacity: 1;
   transform: translateY(0);
 }
-@media (hover: none) {
-  .add-fab {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
+
+/* ping */
 .ping {
   position: absolute;
   inset: 0;
@@ -668,9 +809,10 @@ watch([activeCat, searchQuery, filteredProducts], async () => {
     opacity: 0;
   }
 }
+
+/* cart bump */
 .cartbar {
   transform: translateZ(0);
-  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
 }
 .cartbar.bump {
   animation: bump 0.35s ease;
@@ -700,6 +842,18 @@ watch([activeCat, searchQuery, filteredProducts], async () => {
     opacity: 1;
   }
 }
+
+/* fade */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+/* no scrollbar */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }

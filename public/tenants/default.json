@@ -4,7 +4,12 @@
   "theme": { "primary": "#f97316", "secondary": "#fb923c" },
   "business": { "currency": "AED", "tax_rate": 0, "service_fee": 0 },
   "contact": { "whatsapp_e164": "+963966262458" },
-
+  "order_policy": {
+    "needs_confirmation": true,
+    "eta_minutes": 20,
+    "business_hours": "Daily 10:00–01:00",
+    "tenant_prefix": "KS"
+  },
   "menu": {
     "categories": [
       { "id": "fresh_juices", "name_ar": "عصائر طازجة", "name_en": "Fresh Juices", "order": 1 },
