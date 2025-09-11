@@ -127,7 +127,7 @@
       </div>
     </nav>
 
-    <!-- المنتجات (نسخة محسّنة للموبايل) -->
+    <!-- المنتجات -->
     <main
       class="container mx-auto px-4 py-8"
       :style="{ paddingBottom: cart.length ? 'calc(96px + var(--safe-bottom))' : '0px' }"
@@ -204,7 +204,7 @@
             :key="it.key"
             class="glass border rounded-2xl px-3 py-2 flex items-center gap-2 soft-shadow line"
           >
-            <span class="font-semibold text-sm max-w-[160px] truncate">{{ it.name }}</span>
+            <span class="font-semibold text-sm max-w-[200px] truncate">{{ it.name }}</span>
             <div class="flex items-center gap-1">
               <button
                 class="px-2 py-1 rounded-full border active:scale-95 transition"
@@ -317,14 +317,26 @@
       :lang="currentLanguage"
       @close="wait.show = false"
     />
+
+    <!-- ورقة الخيارات -->
+    <ProductOptionsSheet
+      :show="showOptions"
+      :product="optionsProduct"
+      :lang="currentLanguage"
+      :currency="currency"
+      :btn-style="btnStyle"
+      @close="closeOptions"
+      @confirm="onOptionsConfirm"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, computed, onMounted, nextTick, watch } from 'vue'
 import OrderWaitScreen from './components/OrderWaitScreen.vue'
+import ProductOptionsSheet from './components/ProductOptionsSheet.vue'
 
-/* ===== ترجمة بسيطة ===== */
+/* ===== ترجمة ===== */
 const translations = {
   ar: {
     appTitle: 'قائمة طعام إلكترونية',
@@ -378,7 +390,7 @@ function toggleLanguage() {
   currentLanguage.value = currentLanguage.value === 'ar' ? 'en' : 'ar'
 }
 
-/* ===== قراءة tenant & table من الـ URL ===== */
+/* ===== URL params ===== */
 const url = new URL(window.location.href)
 const tenantIdFromUrl = url.searchParams.get('tenant') || 'default'
 const tableParam = url.searchParams.get('table') || ''
@@ -487,22 +499,50 @@ function bump() {
   })
 }
 
+/* إضافة من الشبكة (مع أو بدون خيارات) */
+const showOptions = ref(false)
+const optionsProduct = ref(null)
+
 function onAddClick(p) {
-  addToCart(p)
-  showToast(t('add') + ' ' + (currentLanguage.value === 'ar' ? p.name_ar : p.name_en || p.name_ar))
+  if (p?.option_groups?.length) {
+    optionsProduct.value = p
+    showOptions.value = true
+  } else {
+    // إضافة مباشرة دون خيارات
+    addLine({
+      key: p.id + '::' + '{}',
+      sku: p.id,
+      displayName: currentLanguage.value === 'ar' ? p.name_ar || '' : p.name_en || p.name_ar || '',
+      unitPrice: Number(p.price) || 0,
+    })
+  }
   fabPing.value = true
   setTimeout(() => (fabPing.value = false), 500)
 }
-function addToCart(p) {
-  const key = p.id + '::{}'
-  const name = currentLanguage.value === 'ar' ? p.name_ar : p.name_en || p.name_ar
+function closeOptions() {
+  showOptions.value = false
+  optionsProduct.value = null
+}
+function onOptionsConfirm(payload) {
+  // payload: { key, displayName, unitPrice }
+  if (!optionsProduct.value) return
+  addLine({
+    key: payload.key,
+    sku: optionsProduct.value.id,
+    displayName: payload.displayName,
+    unitPrice: Number(payload.unitPrice) || 0,
+  })
+  closeOptions()
+}
+function addLine({ key, sku, displayName, unitPrice }) {
   const found = cart.find((it) => it.key === key)
   if (found) found.qty++
-  else cart.push({ key, sku: p.id, name, unitPrice: Number(p.price) || 0, qty: 1 })
+  else cart.push({ key, sku, name: displayName, unitPrice, qty: 1 })
   bump()
 }
 function decFromGrid(p) {
-  const key = p.id + '::{}'
+  // يقلّل من أبسط نسخة (بدون خيارات) إن وجدت
+  const key = p.id + '::' + '{}'
   const f = cart.find((it) => it.key === key)
   if (!f) return
   f.qty > 1 ? f.qty-- : removeLine(f)
@@ -525,7 +565,7 @@ const subtotal = computed(() => cart.reduce((s, it) => s + it.unitPrice * it.qty
 const tax = computed(() => +(subtotal.value * vatRate.value).toFixed(2))
 const total = computed(() => subtotal.value + tax.value)
 
-/* ===== تفاصيل العميل (Checkout) ===== */
+/* ===== Checkout + WhatsApp ===== */
 const showCheckout = ref(false)
 const sending = ref(false)
 const sendError = ref('')
@@ -550,7 +590,7 @@ watch(
   (v) => localStorage.setItem('cust_note', v || ''),
 )
 
-/* ===== توليد Order ID + منع تكرار الإرسال + شاشة انتظار ===== */
+/* Order ID + شاشة الانتظار */
 const wait = reactive({ show: false, id: '', eta: '', hours: '' })
 const lastWaLink = ref('#')
 function generateOrderId(prefix = 'ORD') {
@@ -607,16 +647,13 @@ async function confirmAndSend() {
     return
   }
 
-  // رقم الطلب
   const prefix = tenant.value?.order_policy?.tenant_prefix || 'ORD'
   const orderId = generateOrderId(prefix)
   localStorage.setItem('last_order_id', orderId)
 
-  // رابط واتساب
   const link = buildWaLinkWithOrder(orderId)
   lastWaLink.value = link
 
-  // فتح واتساب
   sending.value = true
   try {
     window.open(link, '_blank')
@@ -625,7 +662,6 @@ async function confirmAndSend() {
     lastSentAt = now
     showCheckout.value = false
 
-    // إعداد شاشة الانتظار
     wait.id = orderId
     wait.eta = tenant.value?.order_policy?.eta_minutes || ''
     wait.hours = tenant.value?.order_policy?.business_hours || ''
@@ -635,7 +671,7 @@ async function confirmAndSend() {
   }
 }
 
-/* ===== صور/أصول (آمنة وبسيطة) ===== */
+/* ===== صور/أصول ===== */
 const PLACEHOLDER =
   'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="400"><rect width="100%" height="100%" fill="%23f3f4f6"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%239ca3af" font-size="24">No Image</text></svg>'
 
@@ -644,14 +680,12 @@ function resolveImg(p) {
   if (p?.image) return 'images/' + p.image
   return PLACEHOLDER
 }
-
 function resolveAsset(s) {
   if (!s) return ''
   if (/^(https?:)?\/\//i.test(s) || s.startsWith('data:')) return s
   if (s.startsWith('/')) return s
   return '/' + s.replace(/^\.?\//, '')
 }
-
 function onImgError(e) {
   e.target.src = PLACEHOLDER
   e.target.onerror = null

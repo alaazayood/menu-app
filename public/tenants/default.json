@@ -30,7 +30,20 @@
         "name_en": "Orange juice",
         "price": 20,
         "available": true,
-        "image_url": "images/img1.jpg"
+        "image_url": "images/img1.jpg",
+        "option_groups": [
+          {
+            "id": "size",
+            "label_ar": "الحجم",
+            "type": "single",
+            "required": true,
+            "options": [
+              { "id": "s", "label_ar": "صغير", "priceDelta": 0 },
+              { "id": "m", "label_ar": "وسط", "priceDelta": 3 },
+              { "id": "l", "label_ar": "كبير", "priceDelta": 6 }
+            ]
+          }
+        ]
       },
       {
         "id": "juice_carrot",
