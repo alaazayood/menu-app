@@ -127,8 +127,11 @@
       </div>
     </nav>
 
-    <!-- المنتجات -->
-    <main class="container mx-auto px-4 py-8">
+    <!-- المنتجات (نسخة محسّنة للموبايل) -->
+    <main
+      class="container mx-auto px-4 py-8"
+      :style="{ paddingBottom: cart.length ? 'calc(96px + var(--safe-bottom))' : '0px' }"
+    >
       <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         <article
           v-for="(p, idx) in filteredProducts"
@@ -143,6 +146,8 @@
               class="w-full h-full object-cover card-img"
               @error="onImgError"
               loading="lazy"
+              decoding="async"
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
             />
             <div class="price-badge" :style="{ color: themePrimary }">
               {{ formatPrice(p.price) }} {{ currency }}
@@ -152,7 +157,6 @@
               <span v-if="fabPing" class="ping"></span>
             </button>
           </div>
-
           <div class="p-4">
             <h3 class="font-bold text-lg text-gray-800 mb-1">
               {{ currentLanguage === 'ar' ? p.name_ar : p.name_en || p.name_ar }}
@@ -162,7 +166,6 @@
                 currentLanguage === 'ar' ? p.description_ar : p.description_en || p.description_ar
               }}
             </p>
-
             <div class="flex items-center justify-between">
               <span class="text-xs text-transparent">#{{ p.id }}</span>
               <div class="flex items-center gap-2">
@@ -237,7 +240,7 @@
       </div>
     </div>
 
-    <!-- نافذة Checkout داخلية (اسم/موقع/ملاحظة) -->
+    <!-- نافذة Checkout -->
     <transition name="fade">
       <div
         v-if="showCheckout"
@@ -388,17 +391,21 @@ const searchQuery = ref('')
 
 async function fetchWithTimeout(u, ms = 6000) {
   const ctrl = new AbortController()
-  const t = setTimeout(() => ctrl.abort('timeout'), ms)
+  const tmo = setTimeout(() => ctrl.abort('timeout'), ms)
   try {
     return await fetch(u, { cache: 'no-store', signal: ctrl.signal })
   } finally {
-    clearTimeout(t)
+    clearTimeout(tmo)
   }
 }
 async function loadTenant() {
   status.value = 'loading'
   errorMsg.value = ''
-  const tries = [`/tenants/${tenantIdFromUrl}.json`, '/tenants/default.json']
+  const tries = [
+    `/tenants/${tenantIdFromUrl}.json`,
+    '/tenants/default.json',
+    './tenants/default.json',
+  ]
   for (const u of tries) {
     try {
       const r = await fetchWithTimeout(u, 7000)
@@ -407,7 +414,6 @@ async function loadTenant() {
       tenant.value = JSON.parse(raw)
       status.value = 'ok'
       await nextTick()
-      initCardObserver()
       return
     } catch (e) {
       errorMsg.value = `${u} → ${e?.message || e}`
@@ -629,7 +635,7 @@ async function confirmAndSend() {
   }
 }
 
-/* ===== صور/أصول (نسخة أبسط وأأمن) ===== */
+/* ===== صور/أصول (آمنة وبسيطة) ===== */
 const PLACEHOLDER =
   'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="400"><rect width="100%" height="100%" fill="%23f3f4f6"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%239ca3af" font-size="24">No Image</text></svg>'
 
@@ -643,33 +649,12 @@ function resolveAsset(s) {
   if (!s) return ''
   if (/^(https?:)?\/\//i.test(s) || s.startsWith('data:')) return s
   if (s.startsWith('/')) return s
-  // ازل ./ أو / في بداية المسار ثم أضف /
   return '/' + s.replace(/^\.?\//, '')
 }
 
 function onImgError(e) {
   e.target.src = PLACEHOLDER
   e.target.onerror = null
-}
-
-/* ===== ظهور البطاقات عند التمرير ===== */
-const inView = reactive({})
-function initCardObserver() {
-  const cards = Array.from(document.querySelectorAll('.js-card'))
-  if (!cards.length) return
-  const ob = new IntersectionObserver(
-    (ents) => {
-      ents.forEach((e) => {
-        const id = e.target.getAttribute('data-id')
-        if (e.isIntersecting) {
-          inView[id] = true
-          ob.unobserve(e.target)
-        }
-      })
-    },
-    { rootMargin: '0px 0px -10% 0px', threshold: 0.1 },
-  )
-  cards.forEach((el) => ob.observe(el))
 }
 
 /* ===== أدوات عرض ===== */
@@ -722,7 +707,7 @@ function formatPrice(n) {
   }
 }
 
-/* بطاقة: مرئية دائمًا + دخول لطيف عند الظهور */
+/* بطاقة: مرئية دائمًا + دخول لطيف */
 .card-base {
   background: rgba(255, 255, 255, 0.92);
   border-radius: 24px;
@@ -741,19 +726,14 @@ function formatPrice(n) {
     opacity: 1;
   }
 }
-
-.card-base.in-view {
-  transform: translateY(0) scale(1);
-  opacity: 1;
-}
 .card-img {
   transition: transform 0.6s ease;
 }
-.card-base:hover .card-img {
+.group:hover .card-img {
   transform: scale(1.06);
 }
 
-/* Price badge */
+/* بادج السعر */
 .price-badge {
   position: absolute;
   top: 0.75rem;
@@ -777,7 +757,7 @@ function formatPrice(n) {
   }
 }
 
-/* Add FAB */
+/* زر الإضافة */
 .add-fab {
   position: absolute;
   bottom: 0.75rem;
@@ -798,23 +778,23 @@ function formatPrice(n) {
   transform: translateY(0);
 }
 
-/* ping */
-.ping {
-  position: absolute;
-  inset: 0;
-  border-radius: 9999px;
-  border: 2px solid rgba(255, 255, 255, 0.7);
-  animation: ping 0.5s ease-out;
+/* لمس الموبايل: أظهر زر الإضافة دائمًا وألغ تكبير الصورة */
+@media (hover: none) and (pointer: coarse) {
+  .add-fab {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .card-base:hover .card-img {
+    transform: none;
+  }
 }
-@keyframes ping {
-  0% {
-    transform: scale(1);
-    opacity: 0.9;
-  }
-  100% {
-    transform: scale(1.3);
-    opacity: 0;
-  }
+
+/* safe area للأسفل عند ظهور السلة */
+:root {
+  --safe-bottom: env(safe-area-inset-bottom, 0);
+}
+.cartbar {
+  padding-bottom: max(0px, var(--safe-bottom));
 }
 
 /* cart bump */
@@ -850,6 +830,12 @@ function formatPrice(n) {
   }
 }
 
+/* مناطق لمس مريحة */
+button {
+  min-height: 44px;
+  min-width: 44px;
+}
+
 /* fade */
 .fade-enter-active,
 .fade-leave-active {
@@ -867,5 +853,13 @@ function formatPrice(n) {
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+/* تقليل الحركة عند تفضيل المستخدم */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
 }
 </style>
