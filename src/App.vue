@@ -1,5 +1,5 @@
 <template>
-  <!-- سكيلتون -->
+  <!-- حالة التحميل -->
   <div
     v-if="status === 'loading'"
     class="min-h-screen bg-[linear-gradient(135deg,#fff7ed,35%,#fde68a)]"
@@ -24,7 +24,7 @@
     </main>
   </div>
 
-  <!-- خطأ -->
+  <!-- حالة الخطأ -->
   <div v-else-if="status === 'error'" class="p-8 text-center text-red-600" :dir="dir">
     {{ t('error') }}
     <pre class="mt-2 bg-white p-3 rounded-md shadow overflow-x-auto text-left text-xs">{{
@@ -185,7 +185,7 @@
       </p>
     </main>
 
-    <!-- ورقة الخيارات -->
+    <!-- Sheet الخيارات -->
     <ProductOptionsSheet
       :show="showOptions"
       :product="optionsProduct"
@@ -196,7 +196,7 @@
       @confirm="onOptionsConfirm"
     />
 
-    <!-- ورقة السلة -->
+    <!-- Sheet السلة -->
     <CartSheet
       :show="showCart"
       :items="cart"
@@ -278,7 +278,7 @@
       </div>
     </transition>
 
-    <!-- شاشة انتظار التأكيد -->
+    <!-- شاشة انتظار تأكيد -->
     <OrderWaitScreen
       :show="wait.show"
       :order-id="wait.id"
@@ -292,18 +292,24 @@
       @close="wait.show = false"
     />
 
-    <!-- زر السلة العائم — يسار الشاشة ويظهر دائمًا -->
-    <button
-      class="cart-fab fixed left-4"
-      :class="[itemCount === 0 ? 'fab-disabled' : 'fab-active', fabBump ? 'fab-bump' : '']"
-      style="z-index: 60"
-      @click="showCart = true"
-      aria-label="Cart"
-    >
-      <span class="icon">🛒</span>
-      <span class="badge" :class="{ 'badge-show': itemCount > 0 }">{{ itemCount }}</span>
-      <span class="shine"></span>
-    </button>
+    <!-- زر السلة العائم: Teleport إلى body -->
+    <teleport to="body">
+      <button
+        class="cart-fab"
+        :class="[
+          itemCount === 0 ? 'fab-disabled' : 'fab-active',
+          fabBump ? 'fab-bump' : '',
+          addedFlash ? 'fab-flash' : '',
+        ]"
+        @click="showCart = true"
+        aria-label="Cart"
+      >
+        <span class="icon">🛒</span>
+        <span class="badge" :class="{ 'badge-show': itemCount > 0 }">{{ itemCount }}</span>
+        <span class="shine"></span>
+        <span v-if="addedFlash" class="pulse"></span>
+      </button>
+    </teleport>
   </div>
 </template>
 
@@ -461,12 +467,24 @@ const filteredProducts = computed(() => {
 const cart = reactive([]) // { key, sku, name, unitPrice, qty }
 const showCart = ref(false)
 const fabBump = ref(false)
+const addedFlash = ref(false)
 
 function addLine({ key, sku, displayName, unitPrice }) {
   const found = cart.find((it) => it.key === key)
   if (found) found.qty++
   else cart.push({ key, sku, name: displayName, unitPrice, qty: 1 })
 }
+function flashFab() {
+  // نبضة الحركة + فلاش لوني
+  fabBump.value = false
+  requestAnimationFrame(() => {
+    fabBump.value = true
+    setTimeout(() => (fabBump.value = false), 420)
+  })
+  addedFlash.value = true
+  setTimeout(() => (addedFlash.value = false), 550)
+}
+
 function onAddClick(p) {
   if (p?.option_groups?.length) {
     optionsProduct.value = p
@@ -478,6 +496,7 @@ function onAddClick(p) {
       displayName: currentLanguage.value === 'ar' ? p.name_ar || '' : p.name_en || p.name_ar || '',
       unitPrice: Number(p.price) || 0,
     })
+    flashFab()
   }
 }
 function decFromGrid(p) {
@@ -504,6 +523,8 @@ const total = computed(() => subtotal.value + tax.value)
 
 watch(itemCount, (n, o) => {
   if (n > o) {
+    // الحركة صارت داخل flashFab عند الإضافة المباشرة،
+    // هنا نضمن النبضة حتى لو تغيّر العدد من أماكن أخرى
     fabBump.value = false
     requestAnimationFrame(() => {
       fabBump.value = true
@@ -512,7 +533,7 @@ watch(itemCount, (n, o) => {
   }
 })
 
-/* ===== خيارات المنتج (Sheet) ===== */
+/* ===== Sheet الخيارات ===== */
 const showOptions = ref(false)
 const optionsProduct = ref(null)
 function closeOptions() {
@@ -527,6 +548,7 @@ function onOptionsConfirm(payload) {
     displayName: payload.displayName,
     unitPrice: Number(payload.unitPrice) || 0,
   })
+  flashFab()
   closeOptions()
 }
 
@@ -684,6 +706,134 @@ function formatPrice(n) {
 }
 </script>
 
+<!-- أنماط عامة غير مُقيّدة (Fix Teleport + safe-area + إشعار الإضافة) -->
+<style>
+:root {
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* زر السلة العائم */
+.cart-fab {
+  position: fixed;
+  left: 16px;
+  bottom: 18px;
+  bottom: calc(18px + var(--safe-bottom, 0px));
+  width: 62px;
+  height: 62px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: radial-gradient(
+    120% 120% at 30% 20%,
+    rgba(255, 255, 255, 0.75),
+    rgba(255, 255, 255, 0.55) 60%,
+    rgba(255, 255, 255, 0.35)
+  );
+  box-shadow:
+    0 14px 34px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    inset 0 -2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(17, 24, 39, 0.06);
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  transform: translateZ(0);
+  z-index: 9999;
+}
+.cart-fab .icon {
+  font-size: 20px;
+}
+.cart-fab .shine {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.85), transparent 40%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0));
+  mix-blend-mode: screen;
+  opacity: 0.8;
+}
+.cart-fab .badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: #fff;
+  font-size: 12px;
+  line-height: 22px;
+  text-align: center;
+  border-radius: 9999px;
+  box-shadow: 0 8px 18px rgba(220, 38, 38, 0.35);
+  transform: scale(0.7);
+  opacity: 0;
+  transition:
+    transform 0.2s,
+    opacity 0.2s;
+}
+.badge-show {
+  transform: scale(1);
+  opacity: 1;
+}
+
+.fab-active {
+  opacity: 1;
+}
+.fab-disabled {
+  opacity: 0.9;
+}
+
+.fab-bump {
+  animation: fabbump 0.42s ease;
+}
+@keyframes fabbump {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* فلاش أخضر قصير + حلقة نبض */
+.fab-flash {
+  background: radial-gradient(
+    120% 120% at 30% 20%,
+    rgba(16, 185, 129, 0.9),
+    rgba(16, 185, 129, 0.6) 60%,
+    rgba(16, 185, 129, 0.4)
+  );
+  box-shadow:
+    0 14px 34px rgba(16, 185, 129, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    inset 0 -2px 8px rgba(0, 0, 0, 0.06);
+}
+.pulse {
+  position: absolute;
+  inset: -6px;
+  border-radius: 9999px;
+  border: 2px solid rgba(16, 185, 129, 0.65);
+  animation: pulse-ring 0.55s ease-out;
+}
+@keyframes pulse-ring {
+  from {
+    transform: scale(0.9);
+    opacity: 0.9;
+  }
+  to {
+    transform: scale(1.2);
+    opacity: 0;
+  }
+}
+</style>
+
+<!-- بقية الأنماط (تبقى scoped) -->
 <style scoped>
 .container {
   max-width: 1200px;
@@ -765,96 +915,6 @@ function formatPrice(n) {
   }
 }
 
-/* زر السلة العائم — يسار */
-:root {
-  --safe-bottom: env(safe-area-inset-bottom, 0);
-}
-
-.cart-fab {
-  bottom: calc(18px + var(--safe-bottom));
-  left: 16px; /* يسار */
-  width: 62px;
-  height: 62px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 9999px;
-  position: fixed;
-  background: radial-gradient(
-    120% 120% at 30% 20%,
-    rgba(255, 255, 255, 0.75),
-    rgba(255, 255, 255, 0.55) 60%,
-    rgba(255, 255, 255, 0.35)
-  );
-  box-shadow:
-    0 14px 34px rgba(0, 0, 0, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.7),
-    inset 0 -2px 8px rgba(0, 0, 0, 0.06);
-  border: 1px solid rgba(17, 24, 39, 0.06);
-  -webkit-tap-highlight-color: transparent;
-  user-select: none;
-  transform: translateZ(0);
-  z-index: 60;
-}
-.cart-fab .icon {
-  font-size: 20px;
-}
-.cart-fab .shine {
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  pointer-events: none;
-  background:
-    radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.85), transparent 40%),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0));
-  mix-blend-mode: screen;
-  opacity: 0.8;
-}
-.cart-fab .badge {
-  position: absolute;
-  top: -6px;
-  right: -6px;
-  min-width: 22px;
-  height: 22px;
-  padding: 0 6px;
-  background: linear-gradient(135deg, #ef4444, #dc2626);
-  color: #fff;
-  font-size: 12px;
-  line-height: 22px;
-  text-align: center;
-  border-radius: 9999px;
-  box-shadow: 0 8px 18px rgba(220, 38, 38, 0.35);
-  transform: scale(0.7);
-  opacity: 0;
-  transition:
-    transform 0.2s,
-    opacity 0.2s;
-}
-.badge-show {
-  transform: scale(1);
-  opacity: 1;
-}
-.fab-active {
-  opacity: 1;
-}
-.fab-disabled {
-  opacity: 0.65;
-}
-.fab-bump {
-  animation: fabbump 0.42s ease;
-}
-@keyframes fabbump {
-  0% {
-    transform: scale(1);
-  }
-  35% {
-    transform: scale(1.08);
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-
 /* fade */
 .fade-enter-active,
 .fade-leave-active {
@@ -865,7 +925,7 @@ function formatPrice(n) {
   opacity: 0;
 }
 
-/* no scrollbar */
+/* إخفاء سكرول التبويبات */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
